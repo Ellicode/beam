@@ -1,0 +1,80 @@
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { electronAPI } from '@electron-toolkit/preload'
+import { Settings } from '../main/settings'
+
+export interface FileTransferProgress {
+  fileName: string
+  fileSize: number
+  bytesTransferred: number
+  percentage: number
+  status: 'pending' | 'transferring' | 'completed' | 'error'
+  error?: string
+}
+
+export interface FileTransferRequest {
+  files: Array<{ name: string; path: string; size: number }>
+  targetAddress: string
+  targetPort: number
+}
+
+// Custom APIs for renderer
+const api = {
+  settings: {
+    load: (): Promise<Settings> => ipcRenderer.invoke('settings:load'),
+    save: (settings: Settings): Promise<Settings> => ipcRenderer.invoke('settings:save', settings),
+    update: <K extends keyof Settings>(key: K, value: Settings[K]): Promise<Settings> =>
+      ipcRenderer.invoke('settings:update', key, value),
+    onChanged: (callback: () => void) => {
+      ipcRenderer.on('settings:changed', callback)
+      return () => ipcRenderer.removeListener('settings:changed', callback)
+    }
+  },
+  file: {
+    getThumbnail: (filePath: string): Promise<string | null> =>
+      ipcRenderer.invoke('file:getThumbnail', filePath),
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
+    tryQuickLook: (filePath: string): Promise<void> =>
+      ipcRenderer.invoke('file:tryQuickLook', filePath)
+  },
+  bonjour: {
+    publish: (deviceName: string): Promise<void> =>
+      ipcRenderer.invoke('bonjour:publish', deviceName),
+    unpublishAll: (): Promise<void> => ipcRenderer.invoke('bonjour:unpublishAll'),
+    findServices: (): Promise<Array<{ name: string; address: string; port: number }>> =>
+      ipcRenderer.invoke('bonjour:findServices')
+  },
+  transfer: {
+    sendFiles: (request: FileTransferRequest): Promise<string> =>
+      ipcRenderer.invoke('peer:transfer-files', request),
+    getStatus: (transferId: string): Promise<FileTransferProgress | undefined> =>
+      ipcRenderer.invoke('peer:get-transfer-status', transferId),
+    cancel: (transferId: string): Promise<void> =>
+      ipcRenderer.invoke('peer:cancel-transfer', transferId),
+    onProgress: (
+      callback: (transferId: string, progress: FileTransferProgress) => void
+    ): (() => void) => {
+      const listener = (_: unknown, transferId: string, progress: FileTransferProgress): void => {
+        callback(transferId, progress)
+      }
+      ipcRenderer.on('file-transfer:progress', listener)
+      return () => ipcRenderer.removeListener('file-transfer:progress', listener)
+    }
+  }
+}
+
+// Use `contextBridge` APIs to expose Electron APIs to
+// renderer only if context isolation is enabled, otherwise
+// just add to the DOM global.
+if (process.contextIsolated) {
+  try {
+    contextBridge.exposeInMainWorld('electron', electronAPI)
+    contextBridge.exposeInMainWorld('api', api)
+  } catch (error) {
+    console.error(error)
+  }
+} else {
+  // @ts-ignore (define in dts)
+  window.electron = electronAPI
+  // @ts-ignore (define in dts)
+  window.api = api
+}
