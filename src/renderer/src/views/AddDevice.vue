@@ -9,10 +9,13 @@ const bonjourDevices = ref<Array<{ name: string; address: string; port: number }
 async function fetchBonjourDevices(): Promise<void> {
   bonjourDevices.value = null
   try {
+    console.log('Searching for devices...')
     const services = await window.api.bonjour.findServices()
+    console.log('Services found:', services)
     bonjourDevices.value = services
   } catch (error) {
     console.error('Failed to fetch Bonjour devices:', error)
+    bonjourDevices.value = []
   }
 }
 
@@ -78,12 +81,30 @@ onMounted(() => {
         No devices found.
       </li>
     </ul>
-    <div v-else class="flex flex-col items-center justify-center w-full h-full">
+    <div v-else class="flex flex-col items-center justify-center w-full h-full py-8">
       <GlobeLock class="w-8 h-8 mb-4 dark:text-neutral-400 text-neutral-500" />
-      <h1 class="font-semibold select-none">No devices found on your local network.</h1>
+      <h1 class="font-semibold select-none">No devices found on your local network</h1>
       <p class="text-center mt-2 text-xs px-5 dark:text-neutral-400 text-neutral-500 select-none">
-        Ensure that your other devices are on the same network and have Bonjour/mDNS enabled.
+        Make sure both devices are on the same network.
       </p>
+      <button
+        class="mt-4 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
+        @click="fetchBonjourDevices"
+      >
+        Refresh
+      </button>
+      <details class="mt-6 text-xs dark:text-neutral-400 text-neutral-500 px-5 max-w-md">
+        <summary class="cursor-pointer select-none font-semibold mb-2">
+          Troubleshooting Windows
+        </summary>
+        <ol class="list-decimal list-inside space-y-1 select-none">
+          <li>Ensure both devices are on the same WiFi network</li>
+          <li>Check Windows Firewall allows the app (port 4000)</li>
+          <li>Install Bonjour Print Services for Windows if needed</li>
+          <li>Disable VPN or proxy if active</li>
+          <li>Try manually adding device by IP address</li>
+        </ol>
+      </details>
     </div>
   </div>
 </template>

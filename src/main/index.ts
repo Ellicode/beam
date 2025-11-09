@@ -96,7 +96,9 @@ app.whenReady().then(async () => {
     const settings = await loadSettings()
     const deviceName =
       settings.deviceName + '#' + Math.floor(Math.random() * 1000) || 'Unknown device'
+    console.log(`Publishing service: ${deviceName} on port ${PORT}`)
     bonjour.publish({ name: deviceName, type: 'file-transfer-app', port: PORT })
+    console.log('Bonjour service published')
   }, 0)
 
   // Create the main window
