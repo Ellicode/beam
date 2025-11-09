@@ -7,7 +7,7 @@ import { setupFileIconIPC } from './fileIcons'
 import { Bonjour } from 'bonjour-service'
 import { setupBonjourIPC } from './bonjour'
 import { startSignalingServer } from './signaling'
-import { setupPeerTransferIPC } from './peer'
+import { setupPeerTransferIPC, setupFileReceiver } from './peer'
 
 let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
@@ -68,6 +68,9 @@ app.whenReady().then(async () => {
 
   // Start signaling server for WebRTC
   startSignalingServer(SIGNALING_PORT)
+
+  // Start file receiver server
+  setupFileReceiver(PORT)
 
   // IPC handlers
   ipcMain.on('ping', () => console.log('pong'))

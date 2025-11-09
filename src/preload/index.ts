@@ -24,6 +24,8 @@ const api = {
     save: (settings: Settings): Promise<Settings> => ipcRenderer.invoke('settings:save', settings),
     update: <K extends keyof Settings>(key: K, value: Settings[K]): Promise<Settings> =>
       ipcRenderer.invoke('settings:update', key, value),
+    selectDownloadPath: (): Promise<string | null> =>
+      ipcRenderer.invoke('settings:selectDownloadPath'),
     onChanged: (callback: () => void) => {
       ipcRenderer.on('settings:changed', callback)
       return () => ipcRenderer.removeListener('settings:changed', callback)
@@ -50,6 +52,15 @@ const api = {
       ipcRenderer.invoke('peer:get-transfer-status', transferId),
     cancel: (transferId: string): Promise<void> =>
       ipcRenderer.invoke('peer:cancel-transfer', transferId),
+    receiveFile: (fileName: string, fileData: string): Promise<string> =>
+      ipcRenderer.invoke('peer:receive-file', fileName, fileData),
+    receiveFileChunk: (
+      fileName: string,
+      chunkData: string,
+      chunkIndex: number,
+      totalChunks: number
+    ): Promise<void> =>
+      ipcRenderer.invoke('peer:receive-file-chunk', fileName, chunkData, chunkIndex, totalChunks),
     onProgress: (
       callback: (transferId: string, progress: FileTransferProgress) => void
     ): (() => void) => {
@@ -58,6 +69,30 @@ const api = {
       }
       ipcRenderer.on('file-transfer:progress', listener)
       return () => ipcRenderer.removeListener('file-transfer:progress', listener)
+    },
+    onReceiveProgress: (
+      callback: (data: { fileName: string; percentage: number; status: string }) => void
+    ): (() => void) => {
+      const listener = (
+        _: unknown,
+        data: { fileName: string; percentage: number; status: string }
+      ): void => {
+        callback(data)
+      }
+      ipcRenderer.on('file-receive:progress', listener)
+      return () => ipcRenderer.removeListener('file-receive:progress', listener)
+    },
+    onReceiveComplete: (
+      callback: (data: { fileName: string; filePath: string; fileSize?: number }) => void
+    ): (() => void) => {
+      const listener = (
+        _: unknown,
+        data: { fileName: string; filePath: string; fileSize?: number }
+      ): void => {
+        callback(data)
+      }
+      ipcRenderer.on('file-receive:complete', listener)
+      return () => ipcRenderer.removeListener('file-receive:complete', listener)
     }
   }
 }

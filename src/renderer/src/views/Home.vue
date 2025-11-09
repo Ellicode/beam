@@ -4,7 +4,7 @@ import { useDropZone } from '@vueuse/core'
 import { ArrowUp, ChevronDown, ChevronLeft, ChevronRight, Plus, X } from 'lucide-vue-next'
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import FileStack from '../components/FileStack.vue'
-import TransferProgress from '../components/TransferProgress.vue'
+import ProgressRing from '@renderer/components/ProgressRing.vue'
 
 interface FileTransferProgress {
   fileName: string
@@ -56,7 +56,18 @@ const addDevice = (): void => {
 const { useSetting } = useSettings()
 const transferOnDrop = useSetting('transferOnDrop')
 const savedDevices = useSetting('savedDevices')
-const currentView = ref<'home' | 'files' | 'progress'>('home')
+const currentView = ref<'home' | 'files'>('home')
+const overallProgress = computed(() => {
+  const progresses = Array.from(transferProgress.value.values())
+  if (progresses.length === 0) {
+    return 0
+  }
+  const total = progresses.reduce((sum, p) => {
+    const percent = typeof p.percentage === 'number' && !isNaN(p.percentage) ? p.percentage : 0
+    return sum + percent
+  }, 0)
+  return total / progresses.length
+})
 const selectedDevice = ref<string>('')
 
 // Computed to check if we have a valid peer selected
@@ -123,7 +134,6 @@ const handleTransfer = async (): Promise<void> => {
 
   isTransferring.value = true
   transferProgress.value.clear()
-  currentView.value = 'progress'
 
   try {
     // Parse selected device
@@ -169,7 +179,10 @@ onMounted(() => {
     const allComplete = allProgress.every((p) => p.status === 'completed' || p.status === 'error')
 
     if (allComplete && allProgress.length > 0) {
-      isTransferring.value = false
+      filePool.value = []
+      setTimeout(() => {
+        isTransferring.value = false
+      }, 500)
     }
   })
 })
@@ -193,7 +206,7 @@ const clearFiles = (): void => {
       class="absolute w-full h-full flex flex-col transition-all duration-300"
       :class="{
         'left-0': currentView === 'home',
-        '-left-full': currentView === 'files' || currentView === 'progress'
+        '-left-full': currentView === 'files'
       }"
     >
       <div
@@ -262,21 +275,26 @@ const clearFiles = (): void => {
           <X class="w-5 h-5" />
         </button>
         <button
-          v-if="!transferOnDrop"
+          v-if="!transferOnDrop && !isTransferring"
           :disabled="isTransferDisabled"
           class="rounded-full ms-2 disabled:dark:bg-white/10 disabled:bg-black/10 disabled:dark:text-white/50 disabled:text-black/50 dark:bg-white dark:text-black bg-black text-white transition-colors duration-200 flex items-center justify-center w-7 h-7"
           @click="handleTransfer"
         >
           <ArrowUp class="w-5 h-5" />
         </button>
+        <ProgressRing
+          v-if="isTransferring"
+          :percentage="overallProgress"
+          :size="28"
+          :stroke-width="5"
+        />
       </div>
     </div>
     <div
       class="absolute w-full h-full flex flex-col transition-all duration-300"
       :class="{
         'left-0': currentView === 'files',
-        'left-full': currentView === 'home',
-        '-left-full': currentView === 'progress'
+        'left-full': currentView === 'home'
       }"
     >
       <button
@@ -310,41 +328,6 @@ const clearFiles = (): void => {
           </div>
         </li>
       </ul>
-    </div>
-    <div
-      class="absolute w-full h-full flex flex-col transition-all duration-300"
-      :class="{
-        'left-0': currentView === 'progress',
-        'left-full': currentView === 'home' || currentView === 'files'
-      }"
-    >
-      <button
-        class="rounded-full shrink-0 ms-2 dark:bg-white/10 bg-black/10 dark:text-white/55 text-black/55 flex items-center justify-center w-5 h-5"
-        @click="currentView = 'home'"
-      >
-        <ChevronLeft class="w-4 h-4" />
-      </button>
-      <div class="px-2 my-3 overflow-auto flex-1">
-        <h2 class="text-sm dark:text-white/70 text-black/70 mb-2 px-1">File Transfer Progress</h2>
-        <div class="space-y-2">
-          <TransferProgress
-            v-for="[transferId, progress] in transferProgress"
-            :key="transferId"
-            :file-name="progress.fileName"
-            :file-size="progress.fileSize"
-            :bytes-transferred="progress.bytesTransferred"
-            :percentage="progress.percentage"
-            :status="progress.status"
-            :error="progress.error"
-          />
-        </div>
-        <p
-          v-if="transferProgress.size === 0"
-          class="text-center text-sm dark:text-white/50 text-black/50 mt-8"
-        >
-          No active transfers
-        </p>
-      </div>
     </div>
   </div>
 </template>

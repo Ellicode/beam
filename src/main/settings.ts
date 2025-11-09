@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { promises as fs } from 'fs'
 import { watch } from 'fs'
@@ -9,12 +9,14 @@ const hostname = os.hostname()
 export interface Settings {
   transferOnDrop: boolean
   deviceName: string
+  downloadPath: string
   savedDevices?: Array<{ name: string; address: string; port: number }>
 }
 
 const defaultSettings: Settings = {
   transferOnDrop: false,
   deviceName: hostname,
+  downloadPath: app.getPath('downloads'),
   savedDevices: []
 }
 
@@ -79,6 +81,22 @@ export function setupSettingsIPC(): void {
 
   ipcMain.handle('settings:update', async (_, key: keyof Settings, value: unknown) => {
     return await updateSetting(key, value as Settings[typeof key])
+  })
+
+  ipcMain.handle('settings:selectDownloadPath', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Select Download Folder',
+      buttonLabel: 'Select Folder'
+    })
+
+    if (!result.canceled && result.filePaths.length > 0) {
+      const selectedPath = result.filePaths[0]
+      await updateSetting('downloadPath', selectedPath)
+      return selectedPath
+    }
+
+    return null
   })
 
   // Set up file watcher

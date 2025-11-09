@@ -3,6 +3,7 @@ import { ref, onMounted, computed, type Ref, type WritableComputedRef } from 'vu
 export interface Settings {
   transferOnDrop: boolean
   deviceName?: string
+  downloadPath?: string
   savedDevices?: Array<{ name: string; address: string; port: number }>
 }
 
