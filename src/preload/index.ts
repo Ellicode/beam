@@ -43,7 +43,13 @@ const api = {
       ipcRenderer.invoke('bonjour:publish', deviceName),
     unpublishAll: (): Promise<void> => ipcRenderer.invoke('bonjour:unpublishAll'),
     findServices: (): Promise<Array<{ name: string; address: string; port: number }>> =>
-      ipcRenderer.invoke('bonjour:findServices')
+      ipcRenderer.invoke('bonjour:findServices'),
+    getPublishedService: (): Promise<{
+      published: boolean
+      name?: string
+      type?: string
+      port?: number
+    }> => ipcRenderer.invoke('bonjour:getPublishedService')
   },
   transfer: {
     sendFiles: (request: FileTransferRequest): Promise<string> =>
