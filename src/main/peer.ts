@@ -203,12 +203,14 @@ export function setupFileReceiver(port: number): void {
         const downloadPath = settings.downloadPath
         const filePath = path.join(downloadPath, fileName)
 
-        // Create write stream
-        const writeStream = await fs.open(filePath, 'w')
+        console.log(`Receiving file: ${fileName} (${fileSize} bytes) -> ${filePath}`)
+
+        // Create write stream using fs.createWriteStream for proper buffering
+        const { createWriteStream } = await import('fs')
+        const writeStream = createWriteStream(filePath)
         let bytesReceived = 0
 
-        req.on('data', async (chunk: Buffer) => {
-          await writeStream.write(chunk)
+        req.on('data', (chunk: Buffer) => {
           bytesReceived += chunk.length
 
           // Notify progress
@@ -224,26 +226,34 @@ export function setupFileReceiver(port: number): void {
           })
         })
 
-        req.on('end', async () => {
-          await writeStream.close()
+        // Pipe the request to the write stream
+        req.pipe(writeStream)
+
+        writeStream.on('finish', () => {
+          console.log(`File saved successfully: ${filePath} (${bytesReceived} bytes)`)
 
           // Notify completion
           BrowserWindow.getAllWindows().forEach((window) => {
             window.webContents.send('file-receive:complete', {
               fileName,
               filePath,
-              fileSize
+              fileSize: bytesReceived
             })
           })
 
-          console.log(`File saved: ${filePath}`)
           res.writeHead(200, { 'Content-Type': 'text/plain' })
           res.end('File received successfully')
         })
 
-        req.on('error', async (error) => {
+        writeStream.on('error', (error) => {
+          console.error('Error writing file:', error)
+          res.writeHead(500, { 'Content-Type': 'text/plain' })
+          res.end('Error writing file')
+        })
+
+        req.on('error', (error) => {
           console.error('Error receiving file:', error)
-          await writeStream.close()
+          writeStream.destroy()
           res.writeHead(500, { 'Content-Type': 'text/plain' })
           res.end('Error receiving file')
         })
