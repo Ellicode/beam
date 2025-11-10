@@ -257,14 +257,21 @@ export function setupFileReceiver(port: number): void {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     // Handle auth status check
     if (req.method === 'GET' && req.url === '/auth-status') {
-      const settings = await loadSettings()
-      const requiresAuth = !!settings.authKey
-      console.log(`Auth status check: requiresAuth = ${requiresAuth}`)
-      res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ requiresAuth }))
+      try {
+        const settings = await loadSettings()
+        const requiresAuth = !!settings.authKey
+        console.log(`Auth status check: requiresAuth = ${requiresAuth}`)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ requiresAuth }))
+      } catch (error) {
+        console.error('Error checking auth status:', error)
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ requiresAuth: false }))
+      }
       return
     }
 
+    // Handle file transfer
     if (req.method === 'POST' && req.url === '/transfer') {
       const fileName = decodeURIComponent(req.headers['x-file-name'] as string)
       const fileSize = parseInt(req.headers['x-file-size'] as string, 10)
@@ -361,10 +368,12 @@ export function setupFileReceiver(port: number): void {
         res.writeHead(500, { 'Content-Type': 'text/plain' })
         res.end('Error saving file')
       }
-    } else {
-      res.writeHead(404, { 'Content-Type': 'text/plain' })
-      res.end('Not found')
+      return
     }
+
+    // Handle unknown routes
+    res.writeHead(404, { 'Content-Type': 'text/plain' })
+    res.end('Not found')
   })
 
   server.listen(port, '0.0.0.0', () => {
