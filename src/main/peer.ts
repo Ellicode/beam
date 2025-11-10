@@ -4,6 +4,7 @@ import path from 'path'
 import { loadSettings } from './settings'
 import { request as httpRequest } from 'http'
 import { createServer, IncomingMessage, ServerResponse } from 'http'
+import { generateAuthKey } from './crypto'
 
 export interface FileTransferProgress {
   fileName: string
@@ -44,6 +45,14 @@ export function setupPeerTransferIPC(): void {
   ipcMain.handle('peer:check-auth-required', async (_, address: string, port: number) => {
     return checkIfPeerRequiresAuth(address, port)
   })
+
+  // Handler to verify a password with a peer
+  ipcMain.handle(
+    'peer:verify-password',
+    async (_, address: string, port: number, password: string) => {
+      return verifyPasswordWithPeer(address, port, password)
+    }
+  )
 
   // Handler to initiate file transfer
   ipcMain.handle(
@@ -251,6 +260,57 @@ async function checkIfPeerRequiresAuth(address: string, port: number): Promise<b
 }
 
 /**
+ * Verify a password with a peer by testing the auth key
+ */
+async function verifyPasswordWithPeer(
+  address: string,
+  port: number,
+  password: string
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    console.log(`Verifying password with peer ${address}:${port}`)
+
+    const { generateAuthKey } = require('./crypto')
+    const authKey = generateAuthKey(password)
+
+    const options = {
+      hostname: address,
+      port: port,
+      path: '/verify-auth',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Auth-Key': authKey
+      },
+      timeout: 3000
+    }
+
+    const req = httpRequest(options, (res) => {
+      if (res.statusCode === 200) {
+        console.log(`Password verified successfully for ${address}:${port}`)
+        resolve(true)
+      } else {
+        console.log(`Password verification failed for ${address}:${port}: status ${res.statusCode}`)
+        resolve(false)
+      }
+    })
+
+    req.on('error', (error) => {
+      console.error(`Error verifying password for ${address}:${port}:`, error)
+      resolve(false)
+    })
+
+    req.on('timeout', () => {
+      console.log(`Timeout verifying password for ${address}:${port}`)
+      req.destroy()
+      resolve(false)
+    })
+
+    req.end()
+  })
+}
+
+/**
  * Setup HTTP server to receive files from peers
  */
 export function setupFileReceiver(port: number): void {
@@ -267,6 +327,44 @@ export function setupFileReceiver(port: number): void {
         console.error('Error checking auth status:', error)
         res.writeHead(500, { 'Content-Type': 'application/json' })
         res.end(JSON.stringify({ requiresAuth: false }))
+      }
+      return
+    }
+
+    // Handle password verification
+    if (req.method === 'POST' && req.url === '/verify-auth') {
+      try {
+        const settings = await loadSettings()
+        const authKey = req.headers['x-auth-key'] as string | undefined
+
+        if (!settings.authKey) {
+          // No password set, verification succeeds
+          console.log('Auth verification: no password set, allowing')
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ valid: true }))
+          return
+        }
+
+        if (!authKey) {
+          console.log('Auth verification: missing auth key')
+          res.writeHead(401, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ valid: false }))
+          return
+        }
+
+        if (authKey === settings.authKey) {
+          console.log('Auth verification: valid auth key')
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ valid: true }))
+        } else {
+          console.log('Auth verification: invalid auth key')
+          res.writeHead(403, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ valid: false }))
+        }
+      } catch (error) {
+        console.error('Error verifying auth:', error)
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ valid: false }))
       }
       return
     }

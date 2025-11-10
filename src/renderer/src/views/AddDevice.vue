@@ -81,32 +81,46 @@ const addDeviceDirectly = async (): Promise<void> => {
 const addDevice = async (withPassword: boolean = true): Promise<void> => {
   if (!selectedDeviceToAdd.value) return
 
-  try {
-    let authKey: string | undefined
+  let authKey: string | undefined
 
-    // Only generate auth key if password is provided
-    if (withPassword && devicePassword.value) {
-      authKey = await window.api.settings.getAuthKey(devicePassword.value)
-    }
+  // Only generate auth key if password is provided
+  if (withPassword && devicePassword.value) {
+    try {
+      // Verify the password with the peer before adding
+      const isValid = await window.api.transfer.verifyPassword(
+        selectedDeviceToAdd.value.address,
+        selectedDeviceToAdd.value.port,
+        devicePassword.value
+      )
 
-    savedDevices.value = [
-      ...(savedDevices.value || []),
-      {
-        name: formatName(selectedDeviceToAdd.value.name),
-        address: selectedDeviceToAdd.value.address,
-        port: selectedDeviceToAdd.value.port,
-        authKey: authKey
+      if (!isValid) {
+        passwordError.value = 'Incorrect password'
+        return
       }
-    ]
 
-    showPasswordPrompt.value = false
-    selectedDeviceToAdd.value = null
-    devicePassword.value = ''
-    window.electron.ipcRenderer.send('close-add-device')
-  } catch (error) {
-    passwordError.value = 'Invalid password'
-    console.error('Failed to add device:', error)
+      authKey = await window.api.settings.getAuthKey(devicePassword.value)
+    } catch (error) {
+      passwordError.value = 'Failed to verify password'
+      console.error('Failed to verify password:', error)
+      return
+    }
   }
+
+  savedDevices.value = [
+    ...(savedDevices.value || []),
+    {
+      name: formatName(selectedDeviceToAdd.value.name),
+      address: selectedDeviceToAdd.value.address,
+      port: selectedDeviceToAdd.value.port,
+      authKey: authKey
+    }
+  ]
+
+  showPasswordPrompt.value = false
+  selectedDeviceToAdd.value = null
+  devicePassword.value = ''
+  passwordError.value = ''
+  window.electron.ipcRenderer.send('close-add-device')
 }
 
 const cancelPasswordPrompt = (): void => {

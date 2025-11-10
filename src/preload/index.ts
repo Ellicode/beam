@@ -64,6 +64,8 @@ const api = {
       ipcRenderer.invoke('peer:transfer-files', request),
     checkAuthRequired: (address: string, port: number): Promise<boolean> =>
       ipcRenderer.invoke('peer:check-auth-required', address, port),
+    verifyPassword: (address: string, port: number, password: string): Promise<boolean> =>
+      ipcRenderer.invoke('peer:verify-password', address, port, password),
     getStatus: (transferId: string): Promise<FileTransferProgress | undefined> =>
       ipcRenderer.invoke('peer:get-transfer-status', transferId),
     cancel: (transferId: string): Promise<void> =>
