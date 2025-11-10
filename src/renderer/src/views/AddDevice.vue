@@ -40,14 +40,22 @@ const promptForPassword = async (device: {
   devicePassword.value = ''
   passwordError.value = ''
 
-  // Check if the peer requires authentication
-  const requiresAuth = await window.api.transfer.checkAuthRequired(device.address, device.port)
+  try {
+    // Check if the peer requires authentication
+    console.log(`Checking auth status for ${device.address}:${device.port}`)
+    const requiresAuth = await window.api.transfer.checkAuthRequired(device.address, device.port)
+    console.log(`Peer requires auth: ${requiresAuth}`)
 
-  if (requiresAuth) {
-    // Show password prompt
-    showPasswordPrompt.value = true
-  } else {
-    // Add device directly without password
+    if (requiresAuth) {
+      // Show password prompt
+      showPasswordPrompt.value = true
+    } else {
+      // Add device directly without password
+      await addDeviceDirectly()
+    }
+  } catch (error) {
+    console.error('Failed to check auth status:', error)
+    // If we can't check, add without password
     await addDeviceDirectly()
   }
 }

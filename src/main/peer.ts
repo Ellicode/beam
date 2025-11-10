@@ -208,6 +208,8 @@ async function sendFileToPeer(
  */
 async function checkIfPeerRequiresAuth(address: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
+    console.log(`Checking if peer ${address}:${port} requires auth...`)
+
     const options = {
       hostname: address,
       port: port,
@@ -224,18 +226,22 @@ async function checkIfPeerRequiresAuth(address: string, port: number): Promise<b
       res.on('end', () => {
         try {
           const response = JSON.parse(data)
+          console.log(`Peer ${address}:${port} auth status:`, response)
           resolve(response.requiresAuth === true)
-        } catch {
+        } catch (error) {
+          console.error(`Failed to parse auth status from ${address}:${port}:`, error)
           resolve(false)
         }
       })
     })
 
-    req.on('error', () => {
+    req.on('error', (error) => {
+      console.error(`Error checking auth status for ${address}:${port}:`, error)
       resolve(false)
     })
 
     req.on('timeout', () => {
+      console.log(`Timeout checking auth status for ${address}:${port}`)
       req.destroy()
       resolve(false)
     })
@@ -252,8 +258,10 @@ export function setupFileReceiver(port: number): void {
     // Handle auth status check
     if (req.method === 'GET' && req.url === '/auth-status') {
       const settings = await loadSettings()
+      const requiresAuth = !!settings.authKey
+      console.log(`Auth status check: requiresAuth = ${requiresAuth}`)
       res.writeHead(200, { 'Content-Type': 'application/json' })
-      res.end(JSON.stringify({ requiresAuth: !!settings.authKey }))
+      res.end(JSON.stringify({ requiresAuth }))
       return
     }
 
