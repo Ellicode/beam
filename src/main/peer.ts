@@ -270,7 +270,6 @@ async function verifyPasswordWithPeer(
   return new Promise((resolve) => {
     console.log(`Verifying password with peer ${address}:${port}`)
 
-    const { generateAuthKey } = require('./crypto')
     const authKey = generateAuthKey(password)
 
     const options = {
