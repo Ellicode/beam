@@ -9,7 +9,6 @@ const showPasswordPrompt = ref(false)
 const selectedDeviceToAdd = ref<{ name: string; address: string; port: number } | null>(null)
 const devicePassword = ref('')
 const passwordError = ref('')
-const currentUserHasPassword = ref(false)
 
 async function fetchBonjourDevices(): Promise<void> {
   bonjourDevices.value = null
@@ -41,10 +40,10 @@ const promptForPassword = async (device: {
   devicePassword.value = ''
   passwordError.value = ''
 
-  // Check if current user has a password set
-  currentUserHasPassword.value = await window.api.settings.hasPassword()
+  // Check if the peer requires authentication
+  const requiresAuth = await window.api.transfer.checkAuthRequired(device.address, device.port)
 
-  if (currentUserHasPassword.value) {
+  if (requiresAuth) {
     // Show password prompt
     showPasswordPrompt.value = true
   } else {
@@ -66,6 +65,7 @@ const addDeviceDirectly = async (): Promise<void> => {
     }
   ]
 
+  showPasswordPrompt.value = false
   selectedDeviceToAdd.value = null
   window.electron.ipcRenderer.send('close-add-device')
 }
@@ -186,13 +186,13 @@ onMounted(() => {
         <p v-if="passwordError" class="text-xs text-red-500 mb-3">{{ passwordError }}</p>
 
         <p v-else class="text-xs dark:text-neutral-400 text-neutral-500 mb-4">
-          If <span class="font-semibold">{{ selectedDeviceToAdd?.name }}</span> has a password set,
-          enter it here. Otherwise, skip to add without authentication.
+          <span class="font-semibold">{{ selectedDeviceToAdd?.name }}</span> requires a password.
+          Enter their super secret password to add them.
         </p>
         <input
           v-model="devicePassword"
           type="password"
-          placeholder="Super secret password (optional)"
+          placeholder="Super secret password"
           class="w-full dark:bg-neutral-800 bg-neutral-100 dark:text-white text-black rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 ring-blue-500 mb-2"
           @keyup.enter="addDevice()"
           @keyup.esc="cancelPasswordPrompt"

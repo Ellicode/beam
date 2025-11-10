@@ -52,6 +52,7 @@ export interface FileTransferRequest {
 
 export interface TransferAPI {
   sendFiles: (request: FileTransferRequest) => Promise<string>
+  checkAuthRequired: (address: string, port: number) => Promise<boolean>
   getStatus: (transferId: string) => Promise<FileTransferProgress | undefined>
   cancel: (transferId: string) => Promise<void>
   receiveFile: (fileName: string, fileData: string) => Promise<string>

@@ -40,6 +40,11 @@ function notifyProgress(transferId: string, progress: FileTransferProgress): voi
  * Setup IPC handlers for peer-to-peer file transfer
  */
 export function setupPeerTransferIPC(): void {
+  // Handler to check if a peer requires authentication
+  ipcMain.handle('peer:check-auth-required', async (_, address: string, port: number) => {
+    return checkIfPeerRequiresAuth(address, port)
+  })
+
   // Handler to initiate file transfer
   ipcMain.handle(
     'peer:transfer-files',
@@ -199,10 +204,59 @@ async function sendFileToPeer(
 }
 
 /**
+ * Check if a peer requires authentication
+ */
+async function checkIfPeerRequiresAuth(address: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: address,
+      port: port,
+      path: '/auth-status',
+      method: 'GET',
+      timeout: 3000
+    }
+
+    const req = httpRequest(options, (res) => {
+      let data = ''
+      res.on('data', (chunk) => {
+        data += chunk
+      })
+      res.on('end', () => {
+        try {
+          const response = JSON.parse(data)
+          resolve(response.requiresAuth === true)
+        } catch {
+          resolve(false)
+        }
+      })
+    })
+
+    req.on('error', () => {
+      resolve(false)
+    })
+
+    req.on('timeout', () => {
+      req.destroy()
+      resolve(false)
+    })
+
+    req.end()
+  })
+}
+
+/**
  * Setup HTTP server to receive files from peers
  */
 export function setupFileReceiver(port: number): void {
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    // Handle auth status check
+    if (req.method === 'GET' && req.url === '/auth-status') {
+      const settings = await loadSettings()
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ requiresAuth: !!settings.authKey }))
+      return
+    }
+
     if (req.method === 'POST' && req.url === '/transfer') {
       const fileName = decodeURIComponent(req.headers['x-file-name'] as string)
       const fileSize = parseInt(req.headers['x-file-size'] as string, 10)
