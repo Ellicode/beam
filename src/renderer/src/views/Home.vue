@@ -140,6 +140,11 @@ const handleTransfer = async (): Promise<void> => {
     const [address, portStr] = selectedDevice.value.split(':')
     const port = parseInt(portStr, 10)
 
+    // Find the selected device to get its authKey
+    const device = savedDevices.value?.find(
+      (d) => `${d.address}:${d.port}` === selectedDevice.value
+    )
+
     // Prepare files for transfer
     const filesToTransfer = filePool.value
       .filter((f) => f.path)
@@ -155,11 +160,12 @@ const handleTransfer = async (): Promise<void> => {
       return
     }
 
-    // Initiate transfer
+    // Initiate transfer with authKey if available
     await window.api.transfer.sendFiles({
       files: filesToTransfer,
       targetAddress: address,
-      targetPort: port
+      targetPort: port,
+      authKey: device?.authKey
     })
 
     console.log('Transfer initiated successfully')
@@ -287,6 +293,7 @@ const clearFiles = (): void => {
           :percentage="overallProgress"
           :size="28"
           :stroke-width="5"
+          class="ms-2"
         />
       </div>
     </div>

@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import Loader from '@renderer/components/Loader.vue'
 import { useSettings } from '@renderer/composables/useSettings'
-import { ChevronRight, GlobeLock, Laptop2 } from 'lucide-vue-next'
+import { ChevronRight, GlobeLock, Laptop2, Lock } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 const bonjourDevices = ref<Array<{ name: string; address: string; port: number }> | null>(null)
+const showPasswordPrompt = ref(false)
+const selectedDeviceToAdd = ref<{ name: string; address: string; port: number } | null>(null)
+const devicePassword = ref('')
+const passwordError = ref('')
 
 async function fetchBonjourDevices(): Promise<void> {
   bonjourDevices.value = null
@@ -27,12 +31,45 @@ const { useSetting } = useSettings()
 const savedDevices = useSetting('savedDevices')
 const deviceName = useSetting('deviceName')
 
-const addDevice = (device: { name: string; address: string; port: number }): void => {
-  savedDevices.value = [
-    ...(savedDevices.value || []),
-    { name: formatName(device.name), address: device.address, port: device.port }
-  ]
-  window.electron.ipcRenderer.send('close-add-device')
+const promptForPassword = (device: { name: string; address: string; port: number }): void => {
+  selectedDeviceToAdd.value = device
+  devicePassword.value = ''
+  passwordError.value = ''
+  showPasswordPrompt.value = true
+}
+
+const addDevice = async (): Promise<void> => {
+  if (!selectedDeviceToAdd.value) return
+
+  try {
+    // Get auth key from the entered password
+    const authKey = await window.api.settings.getAuthKey(devicePassword.value)
+
+    savedDevices.value = [
+      ...(savedDevices.value || []),
+      {
+        name: formatName(selectedDeviceToAdd.value.name),
+        address: selectedDeviceToAdd.value.address,
+        port: selectedDeviceToAdd.value.port,
+        authKey: authKey
+      }
+    ]
+
+    showPasswordPrompt.value = false
+    selectedDeviceToAdd.value = null
+    devicePassword.value = ''
+    window.electron.ipcRenderer.send('close-add-device')
+  } catch (error) {
+    passwordError.value = 'Invalid password'
+    console.error('Failed to add device:', error)
+  }
+}
+
+const cancelPasswordPrompt = (): void => {
+  showPasswordPrompt.value = false
+  selectedDeviceToAdd.value = null
+  devicePassword.value = ''
+  passwordError.value = ''
 }
 
 const filteredBonjourDevices = computed(() => {
@@ -66,7 +103,7 @@ onMounted(() => {
         v-for="device in filteredBonjourDevices"
         :key="device.name + device.address + device.port"
         class="mb-3 p-2 flex items-center rounded-lg cursor-pointer dark:bg-white/5 bg-black/5 active:dark:bg-white/10 active:bg-black/10 border dark:border-white/10 border-black/10"
-        @click="addDevice(device)"
+        @click="promptForPassword(device)"
       >
         <Laptop2 class="w-6 h-6 me-3 shrink-0 dark:text-neutral-300 text-neutral-700" />
         <div class="flex flex-col">
@@ -81,30 +118,65 @@ onMounted(() => {
         No devices found.
       </li>
     </ul>
-    <div v-else class="flex flex-col items-center justify-center w-full h-full py-8">
-      <GlobeLock class="w-8 h-8 mb-4 dark:text-neutral-400 text-neutral-500" />
-      <h1 class="font-semibold select-none">No devices found on your local network</h1>
+    <div
+      v-else
+      class="flex flex-col items-center justify-center w-full max-h-[calc(100vh-5rem)] py-8"
+    >
+      <GlobeLock class="w-5 h-5 mb-4 dark:text-neutral-400 text-neutral-500" />
+      <h1 class="font-semibold text-sm select-none">No devices found on your local network</h1>
       <p class="text-center mt-2 text-xs px-5 dark:text-neutral-400 text-neutral-500 select-none">
         Make sure both devices are on the same network.
       </p>
       <button
-        class="mt-4 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
+        class="mt-4 px-2 py-1 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
         @click="fetchBonjourDevices"
       >
         Refresh
       </button>
-      <details class="mt-6 text-xs dark:text-neutral-400 text-neutral-500 px-5 max-w-md">
-        <summary class="cursor-pointer select-none font-semibold mb-2">
-          Troubleshooting Windows
-        </summary>
-        <ol class="list-decimal list-inside space-y-1 select-none">
-          <li>Ensure both devices are on the same WiFi network</li>
-          <li>Check Windows Firewall allows the app (port 4000)</li>
-          <li>Install Bonjour Print Services for Windows if needed</li>
-          <li>Disable VPN or proxy if active</li>
-          <li>Try manually adding device by IP address</li>
-        </ol>
-      </details>
+    </div>
+
+    <!-- Password Prompt Modal -->
+    <div
+      v-if="showPasswordPrompt"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      @click.self="cancelPasswordPrompt"
+    >
+      <div
+        class="dark:bg-neutral-900 bg-white rounded-lg p-6 w-80 border dark:border-white/10 border-black/10"
+      >
+        <div class="flex items-center mb-4">
+          <Lock class="w-5 h-5 me-2 dark:text-white text-black" />
+          <h2 class="font-semibold text-lg">Enter Device Password</h2>
+        </div>
+        <p class="text-sm dark:text-neutral-400 text-neutral-500 mb-4">
+          Enter the super secret password for
+          <span class="font-semibold">{{ selectedDeviceToAdd?.name }}</span>
+        </p>
+        <input
+          v-model="devicePassword"
+          type="password"
+          placeholder="Super secret password"
+          class="w-full dark:bg-neutral-800 bg-neutral-100 dark:text-white text-black rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 ring-blue-500 mb-2"
+          @keyup.enter="addDevice"
+          @keyup.esc="cancelPasswordPrompt"
+        />
+        <p v-if="passwordError" class="text-xs text-red-500 mb-3">{{ passwordError }}</p>
+        <div class="flex gap-2">
+          <button
+            class="flex-1 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
+            @click="cancelPasswordPrompt"
+          >
+            Cancel
+          </button>
+          <button
+            class="flex-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            :disabled="!devicePassword"
+            @click="addDevice"
+          >
+            Add Device
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

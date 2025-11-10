@@ -2,9 +2,12 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 
 export interface Settings {
   transferOnDrop: boolean
-  deviceName?: string
-  downloadPath?: string
-  savedDevices?: Array<{ name: string; address: string; port: number }>
+  deviceName: string
+  downloadPath: string
+  superSecretPassword?: string
+  passwordSalt?: string
+  authKey?: string
+  savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
 export interface SettingsAPI {
@@ -12,6 +15,10 @@ export interface SettingsAPI {
   save: (settings: Settings) => Promise<Settings>
   update: <K extends keyof Settings>(key: K, value: Settings[K]) => Promise<Settings>
   selectDownloadPath: () => Promise<string | null>
+  setPassword: (password: string) => Promise<boolean>
+  verifyPassword: (password: string) => Promise<boolean>
+  hasPassword: () => Promise<boolean>
+  getAuthKey: (password: string) => Promise<string>
   onChanged: (callback: () => void) => () => void
 }
 
@@ -40,6 +47,7 @@ export interface FileTransferRequest {
   files: Array<{ name: string; path: string; size: number }>
   targetAddress: string
   targetPort: number
+  authKey?: string
 }
 
 export interface TransferAPI {

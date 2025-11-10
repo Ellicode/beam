@@ -1,10 +1,13 @@
 import { ref, onMounted, computed, type Ref, type WritableComputedRef } from 'vue'
 
-export interface Settings {
+interface Settings {
   transferOnDrop: boolean
-  deviceName?: string
-  downloadPath?: string
-  savedDevices?: Array<{ name: string; address: string; port: number }>
+  deviceName: string
+  downloadPath: string
+  superSecretPassword?: string
+  passwordSalt?: string
+  authKey?: string
+  savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
 type SettingKey = keyof Settings
@@ -12,6 +15,7 @@ type SettingKey = keyof Settings
 const settings = ref<Settings>({
   transferOnDrop: false,
   deviceName: '',
+  downloadPath: '',
   savedDevices: []
 })
 

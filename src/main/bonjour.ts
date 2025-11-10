@@ -74,7 +74,7 @@ export function setupBonjourIPC(bonjour: Bonjour): void {
           services.map((s) => s.name)
         )
         resolve(services)
-      }, 5000)
+      }, 2000)
     })
   })
 

@@ -18,6 +18,7 @@ export interface FileTransferRequest {
   files: Array<{ name: string; path: string; size: number }>
   targetAddress: string
   targetPort: number
+  authKey?: string
 }
 
 // Track active transfers
@@ -98,11 +99,17 @@ async function initiateFileTransfer(
       notifyProgress(`${transferId}_${file.name}`, progress)
 
       // Send file to peer
-      await sendFileToPeer(file, request.targetAddress, request.targetPort, (bytes) => {
-        progress.bytesTransferred = bytes
-        progress.percentage = Math.round((bytes / file.size) * 100)
-        notifyProgress(`${transferId}_${file.name}`, progress)
-      })
+      await sendFileToPeer(
+        file,
+        request.targetAddress,
+        request.targetPort,
+        (bytes) => {
+          progress.bytesTransferred = bytes
+          progress.percentage = Math.round((bytes / file.size) * 100)
+          notifyProgress(`${transferId}_${file.name}`, progress)
+        },
+        request.authKey
+      )
 
       // Mark as completed
       progress.status = 'completed'
@@ -124,19 +131,27 @@ async function sendFileToPeer(
   file: { name: string; path: string; size: number },
   targetAddress: string,
   targetPort: number,
-  onProgress: (bytes: number) => void
+  onProgress: (bytes: number) => void,
+  authKey?: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/octet-stream',
+      'X-File-Name': encodeURIComponent(file.name),
+      'X-File-Size': file.size.toString()
+    }
+
+    // Include auth key if provided
+    if (authKey) {
+      headers['X-Auth-Key'] = authKey
+    }
+
     const options = {
       hostname: targetAddress,
       port: targetPort,
       path: '/transfer',
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'X-File-Name': encodeURIComponent(file.name),
-        'X-File-Size': file.size.toString()
-      }
+      headers
     }
 
     const req = httpRequest(options, (res) => {
@@ -191,6 +206,7 @@ export function setupFileReceiver(port: number): void {
     if (req.method === 'POST' && req.url === '/transfer') {
       const fileName = decodeURIComponent(req.headers['x-file-name'] as string)
       const fileSize = parseInt(req.headers['x-file-size'] as string, 10)
+      const authKey = req.headers['x-auth-key'] as string | undefined
 
       if (!fileName || !fileSize) {
         res.writeHead(400, { 'Content-Type': 'text/plain' })
@@ -200,6 +216,27 @@ export function setupFileReceiver(port: number): void {
 
       try {
         const settings = await loadSettings()
+
+        // Verify authentication if this device has a password set
+        if (settings.authKey) {
+          if (!authKey) {
+            console.log('Rejected file transfer: Missing authentication')
+            res.writeHead(401, { 'Content-Type': 'text/plain' })
+            res.end('Authentication required')
+            return
+          }
+
+          // Verify the auth key matches this device's auth key
+          if (authKey !== settings.authKey) {
+            console.log('Rejected file transfer: Invalid authentication')
+            res.writeHead(403, { 'Content-Type': 'text/plain' })
+            res.end('Invalid authentication')
+            return
+          }
+
+          console.log('File transfer authenticated successfully')
+        }
+
         const downloadPath = settings.downloadPath
         const filePath = path.join(downloadPath, fileName)
 

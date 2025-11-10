@@ -3,6 +3,7 @@ import { join } from 'path'
 import { promises as fs } from 'fs'
 import { watch } from 'fs'
 import os from 'os'
+import { generateSalt, hashPassword, verifyPassword, generateAuthKey } from './crypto'
 
 const hostname = os.hostname()
 
@@ -10,7 +11,10 @@ export interface Settings {
   transferOnDrop: boolean
   deviceName: string
   downloadPath: string
-  savedDevices?: Array<{ name: string; address: string; port: number }>
+  superSecretPassword?: string
+  passwordSalt?: string
+  authKey?: string
+  savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
 const defaultSettings: Settings = {
@@ -97,6 +101,54 @@ export function setupSettingsIPC(): void {
     }
 
     return null
+  })
+
+  // Set up password
+  ipcMain.handle('settings:set-password', async (_, password: string) => {
+    const settings = await loadSettings()
+    const salt = generateSalt()
+    const hashedPassword = hashPassword(password, salt)
+    const authKey = generateAuthKey(password)
+
+    settings.superSecretPassword = hashedPassword
+    settings.passwordSalt = salt
+    settings.authKey = authKey
+
+    await saveSettings(settings)
+    return true
+  })
+
+  // Verify password
+  ipcMain.handle('settings:verifyPassword', async (_, password: string) => {
+    const settings = settingsCache || (await loadSettings())
+
+    if (!settings.superSecretPassword || !settings.passwordSalt) {
+      return false
+    }
+
+    return verifyPassword(password, settings.passwordSalt, settings.superSecretPassword)
+  })
+
+  // Check if password is set
+  ipcMain.handle('settings:hasPassword', async () => {
+    const settings = settingsCache || (await loadSettings())
+    return !!(settings.superSecretPassword && settings.passwordSalt)
+  })
+
+  // Get auth key for current password
+  ipcMain.handle('settings:getAuthKey', async (_, password: string) => {
+    const settings = settingsCache || (await loadSettings())
+
+    if (!settings.superSecretPassword || !settings.passwordSalt) {
+      throw new Error('No password set')
+    }
+
+    const isValid = verifyPassword(password, settings.passwordSalt, settings.superSecretPassword)
+    if (!isValid) {
+      throw new Error('Invalid password')
+    }
+
+    return generateAuthKey(password)
   })
 
   // Set up file watcher

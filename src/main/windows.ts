@@ -10,6 +10,17 @@ export function createMainWindow(): BrowserWindow {
     resizable: false,
     minimizable: false,
     titleBarStyle: 'hidden',
+
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: nativeTheme.shouldUseDarkColors ? '#ffffff' : '#000000',
+            height: 32
+          }
+        }
+      : {}),
+
     vibrancy: 'fullscreen-ui', // on MacOS
     backgroundMaterial: 'acrylic', // on Windows 11
     ...(process.platform === 'linux' ? { icon } : {}),

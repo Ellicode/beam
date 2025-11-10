@@ -15,6 +15,7 @@ export interface FileTransferRequest {
   files: Array<{ name: string; path: string; size: number }>
   targetAddress: string
   targetPort: number
+  authKey?: string
 }
 
 // Custom APIs for renderer
@@ -26,6 +27,13 @@ const api = {
       ipcRenderer.invoke('settings:update', key, value),
     selectDownloadPath: (): Promise<string | null> =>
       ipcRenderer.invoke('settings:selectDownloadPath'),
+    setPassword: (password: string): Promise<boolean> =>
+      ipcRenderer.invoke('settings:setPassword', password),
+    verifyPassword: (password: string): Promise<boolean> =>
+      ipcRenderer.invoke('settings:verifyPassword', password),
+    hasPassword: (): Promise<boolean> => ipcRenderer.invoke('settings:hasPassword'),
+    getAuthKey: (password: string): Promise<string> =>
+      ipcRenderer.invoke('settings:getAuthKey', password),
     onChanged: (callback: () => void) => {
       ipcRenderer.on('settings:changed', callback)
       return () => ipcRenderer.removeListener('settings:changed', callback)
