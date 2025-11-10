@@ -52,6 +52,26 @@ const api = {
     unpublishAll: (): Promise<void> => ipcRenderer.invoke('bonjour:unpublishAll'),
     findServices: (): Promise<Array<{ name: string; address: string; port: number }>> =>
       ipcRenderer.invoke('bonjour:findServices'),
+    stopDiscovery: (): Promise<void> => ipcRenderer.invoke('bonjour:stopDiscovery'),
+    onServiceUp: (
+      callback: (service: { name: string; address: string; port: number }) => void
+    ): (() => void) => {
+      const listener = (
+        _: unknown,
+        service: { name: string; address: string; port: number }
+      ): void => {
+        callback(service)
+      }
+      ipcRenderer.on('bonjour:service-up', listener)
+      return () => ipcRenderer.removeListener('bonjour:service-up', listener)
+    },
+    onServiceDown: (callback: (service: { name: string; port: number }) => void): (() => void) => {
+      const listener = (_: unknown, service: { name: string; port: number }): void => {
+        callback(service)
+      }
+      ipcRenderer.on('bonjour:service-down', listener)
+      return () => ipcRenderer.removeListener('bonjour:service-down', listener)
+    },
     getPublishedService: (): Promise<{
       published: boolean
       name?: string

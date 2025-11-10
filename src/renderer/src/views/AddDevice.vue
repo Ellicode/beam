@@ -2,23 +2,49 @@
 import Loader from '@renderer/components/Loader.vue'
 import { useSettings } from '@renderer/composables/useSettings'
 import { ChevronRight, GlobeLock, Laptop2 } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const bonjourDevices = ref<Array<{ name: string; address: string; port: number }> | null>(null)
 const showPasswordPrompt = ref(false)
 const selectedDeviceToAdd = ref<{ name: string; address: string; port: number } | null>(null)
 const devicePassword = ref('')
 const passwordError = ref('')
+let serviceUpUnsubscribe: (() => void) | null = null
+let serviceDownUnsubscribe: (() => void) | null = null
 
 async function fetchBonjourDevices(): Promise<void> {
-  bonjourDevices.value = null
+  bonjourDevices.value = []
+
   try {
-    console.log('Searching for devices...')
-    const services = await window.api.bonjour.findServices()
-    console.log('Services found:', services)
-    bonjourDevices.value = services
+    console.log('Starting service discovery...')
+
+    // Start discovery (returns immediately)
+    await window.api.bonjour.findServices()
+
+    // Set up listeners for services appearing/disappearing
+    serviceUpUnsubscribe = window.api.bonjour.onServiceUp((service) => {
+      console.log('Service appeared:', service)
+      if (bonjourDevices.value) {
+        // Check if service already exists
+        const exists = bonjourDevices.value.some(
+          (s) => s.name === service.name && s.address === service.address && s.port === service.port
+        )
+        if (!exists) {
+          bonjourDevices.value.push(service)
+        }
+      }
+    })
+
+    serviceDownUnsubscribe = window.api.bonjour.onServiceDown((service) => {
+      console.log('Service disappeared:', service)
+      if (bonjourDevices.value) {
+        bonjourDevices.value = bonjourDevices.value.filter(
+          (s) => !(s.name === service.name && s.port === service.port)
+        )
+      }
+    })
   } catch (error) {
-    console.error('Failed to fetch Bonjour devices:', error)
+    console.error('Failed to start service discovery:', error)
     bonjourDevices.value = []
   }
 }
@@ -147,10 +173,31 @@ const filteredBonjourDevices = computed(() => {
 onMounted(() => {
   fetchBonjourDevices()
 })
+
+onUnmounted(() => {
+  // Clean up listeners
+  if (serviceUpUnsubscribe) {
+    serviceUpUnsubscribe()
+  }
+  if (serviceDownUnsubscribe) {
+    serviceDownUnsubscribe()
+  }
+  // Stop discovery when leaving the page
+  window.api.bonjour.stopDiscovery()
+})
 </script>
 <template>
-  <div v-if="bonjourDevices == null" class="flex-1 w-full flex justify-center items-center">
-    <Loader :size="30" class="dark:text-white text-black" />
+  <div v-if="bonjourDevices == null || bonjourDevices.length === 0" class="flex-1 w-full">
+    <div v-if="bonjourDevices == null" class="flex justify-center items-center h-full">
+      <Loader :size="30" class="dark:text-white text-black" />
+    </div>
+    <div v-else class="flex flex-col items-center justify-center w-full h-full py-8">
+      <GlobeLock class="w-5 h-5 mb-4 dark:text-neutral-400 text-neutral-500" />
+      <h1 class="font-semibold text-sm select-none">Searching for devices...</h1>
+      <p class="text-center mt-2 text-xs px-5 dark:text-neutral-400 text-neutral-500 select-none">
+        Make sure both devices are on the same network.
+      </p>
+    </div>
   </div>
   <div v-else class="p-3 dark:text-neutral-100 text-neutral-900">
     <h2 class="uppercase text-xs mb-2 dark:text-neutral-400 text-neutral-500 select-none">

@@ -1,9 +1,10 @@
-import { Bonjour, Service } from 'bonjour-service'
-import { ipcMain } from 'electron'
+import { Bonjour, Service, Browser } from 'bonjour-service'
+import { ipcMain, BrowserWindow } from 'electron'
 const PORT = 4000
 const SERVICE_TYPE = 'file-transfer-app'
 
 let publishedService: Service | null = null
+let activeBrowser: Browser | null = null
 
 export function setupBonjourIPC(bonjour: Bonjour): void {
   ipcMain.handle('bonjour:publish', async (_, deviceName: string) => {
@@ -38,44 +39,64 @@ export function setupBonjourIPC(bonjour: Bonjour): void {
   })
 
   ipcMain.handle('bonjour:findServices', async () => {
-    return new Promise((resolve) => {
-      const services: Array<{ name: string; address: string; port: number }> = []
-      const browser = bonjour.find({ type: SERVICE_TYPE })
+    // Stop any existing browser
+    if (activeBrowser) {
+      activeBrowser.stop()
+      activeBrowser = null
+    }
 
-      console.log(`Starting service discovery for type: ${SERVICE_TYPE}`)
+    const services: Array<{ name: string; address: string; port: number }> = []
+    activeBrowser = bonjour.find({ type: SERVICE_TYPE })
 
-      browser.on('up', (service) => {
-        console.log('Service found:', service.name, service.addresses, service.port)
-        if (service.addresses && service.addresses.length > 0) {
-          // Filter out IPv6 addresses and prefer IPv4
-          const ipv4Address = service.addresses.find((addr) => {
-            return addr.includes('.') && !addr.includes(':')
-          })
+    console.log(`Starting service discovery for type: ${SERVICE_TYPE}`)
 
-          const address = ipv4Address || service.addresses[0]
+    activeBrowser.on('up', (service) => {
+      console.log('Service found:', service.name, service.addresses, service.port)
+      if (service.addresses && service.addresses.length > 0) {
+        // Filter out IPv6 addresses and prefer IPv4
+        const ipv4Address = service.addresses.find((addr) => {
+          return addr.includes('.') && !addr.includes(':')
+        })
 
-          services.push({
-            name: service.name,
-            address: address,
-            port: service.port
-          })
+        const address = ipv4Address || service.addresses[0]
+
+        const newService = {
+          name: service.name,
+          address: address,
+          port: service.port
         }
-      })
 
-      browser.on('down', (service) => {
-        console.log('Service down:', service.name)
-      })
+        services.push(newService)
 
-      // Wait for a longer period to gather services (especially on Windows)
-      setTimeout(() => {
-        browser.stop()
-        console.log(
-          `Found ${services.length} services:`,
-          services.map((s) => s.name)
-        )
-        resolve(services)
-      }, 2000)
+        // Notify all windows of the new service
+        BrowserWindow.getAllWindows().forEach((window) => {
+          window.webContents.send('bonjour:service-up', newService)
+        })
+      }
     })
+
+    activeBrowser.on('down', (service) => {
+      console.log('Service down:', service.name)
+
+      // Notify all windows of the service going down
+      BrowserWindow.getAllWindows().forEach((window) => {
+        window.webContents.send('bonjour:service-down', {
+          name: service.name,
+          port: service.port
+        })
+      })
+    })
+
+    // Return immediately with empty array, services will be sent via events
+    return services
+  })
+
+  ipcMain.handle('bonjour:stopDiscovery', async () => {
+    if (activeBrowser) {
+      activeBrowser.stop()
+      activeBrowser = null
+      console.log('Stopped service discovery')
+    }
   })
 
   // Add handler to check if service is published

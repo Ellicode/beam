@@ -32,6 +32,17 @@ export interface BonjourAPI {
   publish: (deviceName: string) => Promise<void>
   unpublishAll: () => Promise<void>
   findServices: () => Promise<Array<{ name: string; address: string; port: number }>>
+  stopDiscovery: () => Promise<void>
+  onServiceUp: (
+    callback: (service: { name: string; address: string; port: number }) => void
+  ) => () => void
+  onServiceDown: (callback: (service: { name: string; port: number }) => void) => () => void
+  getPublishedService: () => Promise<{
+    published: boolean
+    name?: string
+    type?: string
+    port?: number
+  }>
 }
 
 export interface FileTransferProgress {
