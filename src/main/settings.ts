@@ -104,7 +104,7 @@ export function setupSettingsIPC(): void {
   })
 
   // Set up password
-  ipcMain.handle('settings:set-password', async (_, password: string) => {
+  ipcMain.handle('settings:setPassword', async (_, password: string) => {
     const settings = await loadSettings()
     const salt = generateSalt()
     const hashedPassword = hashPassword(password, salt)
@@ -135,19 +135,10 @@ export function setupSettingsIPC(): void {
     return !!(settings.superSecretPassword && settings.passwordSalt)
   })
 
-  // Get auth key for current password
+  // Get auth key for a given password (used when adding devices)
   ipcMain.handle('settings:getAuthKey', async (_, password: string) => {
-    const settings = settingsCache || (await loadSettings())
-
-    if (!settings.superSecretPassword || !settings.passwordSalt) {
-      throw new Error('No password set')
-    }
-
-    const isValid = verifyPassword(password, settings.passwordSalt, settings.superSecretPassword)
-    if (!isValid) {
-      throw new Error('Invalid password')
-    }
-
+    // Simply generate the auth key from the provided password
+    // This is used when adding another device - we hash their password
     return generateAuthKey(password)
   })
 

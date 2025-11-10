@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import Settings from '../views/Settings.vue'
 import AddDevice from '@renderer/views/AddDevice.vue'
+import PasswordSetup from '@renderer/views/PasswordSetup.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -29,6 +30,14 @@ const router = createRouter({
         windowTitle: 'Add Device'
       },
       component: AddDevice
+    },
+    {
+      path: '/password-setup',
+      name: 'password-setup',
+      meta: {
+        windowTitle: 'Password Setup'
+      },
+      component: PasswordSetup
     }
   ]
 })

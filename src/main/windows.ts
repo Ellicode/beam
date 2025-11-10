@@ -60,6 +60,16 @@ export function createSettingsWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
     titleBarStyle: 'hidden',
+
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: nativeTheme.shouldUseDarkColors ? '#ffffff' : '#000000',
+            height: 32
+          }
+        }
+      : {}),
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -96,6 +106,16 @@ export function createAddDeviceModal(mainWindow?: BrowserWindow): BrowserWindow 
     show: false,
     resizable: false,
     titleBarStyle: 'hidden',
+
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: nativeTheme.shouldUseDarkColors ? '#ffffff' : '#000000',
+            height: 32
+          }
+        }
+      : {}),
     vibrancy: 'fullscreen-ui', // on MacOS
     backgroundMaterial: 'acrylic', // on Windows 11
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -130,4 +150,59 @@ export function createAddDeviceModal(mainWindow?: BrowserWindow): BrowserWindow 
   }
 
   return addDeviceModal
+}
+
+export function createPasswordSetupModal(parentWindow?: BrowserWindow): BrowserWindow {
+  const passwordModal = new BrowserWindow({
+    width: 450,
+    height: 350,
+    parent: parentWindow || BrowserWindow.getFocusedWindow() || undefined,
+    modal: true,
+    show: false,
+    resizable: false,
+    titleBarStyle: 'hidden',
+
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: nativeTheme.shouldUseDarkColors ? '#ffffff' : '#000000',
+            height: 32
+          }
+        }
+      : {}),
+    vibrancy: 'fullscreen-ui', // on MacOS
+    backgroundMaterial: 'acrylic', // on Windows 11
+    ...(process.platform === 'linux' ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  passwordModal.on('ready-to-show', () => {
+    passwordModal.show()
+  })
+
+  passwordModal.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: 'deny' }
+  })
+
+  // Press esc to close the modal
+  passwordModal.webContents.on('before-input-event', (_, input) => {
+    if (input.key === 'Escape') {
+      passwordModal.close()
+    }
+  })
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    passwordModal.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/password-setup')
+  } else {
+    passwordModal.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: 'password-setup'
+    })
+  }
+
+  return passwordModal
 }

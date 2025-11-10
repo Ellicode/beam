@@ -1,6 +1,11 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { createAddDeviceModal, createMainWindow, createSettingsWindow } from './windows'
+import {
+  createAddDeviceModal,
+  createMainWindow,
+  createSettingsWindow,
+  createPasswordSetupModal
+} from './windows'
 import { createAppMenu } from './menu'
 import { loadSettings, setupSettingsIPC } from './settings'
 import { setupFileIconIPC } from './fileIcons'
@@ -11,6 +16,7 @@ import { setupPeerTransferIPC, setupFileReceiver } from './peer'
 
 let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
+let passwordSetupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
 
 const bonjour = new Bonjour()
@@ -40,6 +46,19 @@ function openAddDeviceWindow(): void {
 
   addDeviceWindow.on('closed', () => {
     addDeviceWindow = null
+  })
+}
+
+function openPasswordSetupWindow(): void {
+  if (passwordSetupWindow) {
+    passwordSetupWindow.focus()
+    return
+  }
+
+  passwordSetupWindow = createPasswordSetupModal(settingsWindow || undefined)
+
+  passwordSetupWindow.on('closed', () => {
+    passwordSetupWindow = null
   })
 }
 
@@ -76,9 +95,15 @@ app.whenReady().then(async () => {
   ipcMain.on('ping', () => console.log('pong'))
   ipcMain.on('open-settings', openSettingsWindow)
   ipcMain.on('open-add-device', openAddDeviceWindow)
+  ipcMain.on('open-password-setup', openPasswordSetupWindow)
   ipcMain.on('close-add-device', () => {
     if (addDeviceWindow) {
       addDeviceWindow.close()
+    }
+  })
+  ipcMain.on('close-password-setup', () => {
+    if (passwordSetupWindow) {
+      passwordSetupWindow.close()
     }
   })
 

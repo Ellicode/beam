@@ -10,7 +10,7 @@ const os = useOS()
 <template>
   <div class="w-screen h-screen flex flex-col">
     <header
-      class="w-full h-8 px-3 flex items-center"
+      class="w-full h-8 px-3 flex items-center shrink-0"
       :class="{
         'justify-end': os.isMac,
         'justify-start': !os.isMac

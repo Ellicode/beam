@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import Loader from '@renderer/components/Loader.vue'
 import { useSettings } from '@renderer/composables/useSettings'
-import { ChevronRight, GlobeLock, Laptop2, Lock } from 'lucide-vue-next'
+import { ChevronRight, GlobeLock, Laptop2 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 
 const bonjourDevices = ref<Array<{ name: string; address: string; port: number }> | null>(null)
@@ -9,6 +9,7 @@ const showPasswordPrompt = ref(false)
 const selectedDeviceToAdd = ref<{ name: string; address: string; port: number } | null>(null)
 const devicePassword = ref('')
 const passwordError = ref('')
+const currentUserHasPassword = ref(false)
 
 async function fetchBonjourDevices(): Promise<void> {
   bonjourDevices.value = null
@@ -31,19 +32,54 @@ const { useSetting } = useSettings()
 const savedDevices = useSetting('savedDevices')
 const deviceName = useSetting('deviceName')
 
-const promptForPassword = (device: { name: string; address: string; port: number }): void => {
+const promptForPassword = async (device: {
+  name: string
+  address: string
+  port: number
+}): Promise<void> => {
   selectedDeviceToAdd.value = device
   devicePassword.value = ''
   passwordError.value = ''
-  showPasswordPrompt.value = true
+
+  // Check if current user has a password set
+  currentUserHasPassword.value = await window.api.settings.hasPassword()
+
+  if (currentUserHasPassword.value) {
+    // Show password prompt
+    showPasswordPrompt.value = true
+  } else {
+    // Add device directly without password
+    await addDeviceDirectly()
+  }
 }
 
-const addDevice = async (): Promise<void> => {
+const addDeviceDirectly = async (): Promise<void> => {
+  if (!selectedDeviceToAdd.value) return
+
+  savedDevices.value = [
+    ...(savedDevices.value || []),
+    {
+      name: formatName(selectedDeviceToAdd.value.name),
+      address: selectedDeviceToAdd.value.address,
+      port: selectedDeviceToAdd.value.port,
+      authKey: undefined
+    }
+  ]
+
+  selectedDeviceToAdd.value = null
+  window.electron.ipcRenderer.send('close-add-device')
+}
+
+const addDevice = async (withPassword: boolean = true): Promise<void> => {
   if (!selectedDeviceToAdd.value) return
 
   try {
-    // Get auth key from the entered password
-    const authKey = await window.api.settings.getAuthKey(devicePassword.value)
+    let authKey: string | undefined
+
+    // Only generate auth key if password is provided
+    if (withPassword && devicePassword.value) {
+      authKey = await window.api.settings.getAuthKey(devicePassword.value)
+    }
 
     savedDevices.value = [
       ...(savedDevices.value || []),
@@ -142,38 +178,38 @@ onMounted(() => {
       @click.self="cancelPasswordPrompt"
     >
       <div
-        class="dark:bg-neutral-900 bg-white rounded-lg p-6 w-80 border dark:border-white/10 border-black/10"
+        class="dark:bg-neutral-900 bg-white rounded-2xl p-3 w-80 border dark:border-white/10 border-black/10 inset-shadow-2xs"
       >
-        <div class="flex items-center mb-4">
-          <Lock class="w-5 h-5 me-2 dark:text-white text-black" />
-          <h2 class="font-semibold text-lg">Enter Device Password</h2>
+        <div class="flex items-center mb-3">
+          <h2 class="font-semibold">Device Password</h2>
         </div>
-        <p class="text-sm dark:text-neutral-400 text-neutral-500 mb-4">
-          Enter the super secret password for
-          <span class="font-semibold">{{ selectedDeviceToAdd?.name }}</span>
+        <p v-if="passwordError" class="text-xs text-red-500 mb-3">{{ passwordError }}</p>
+
+        <p v-else class="text-xs dark:text-neutral-400 text-neutral-500 mb-4">
+          If <span class="font-semibold">{{ selectedDeviceToAdd?.name }}</span> has a password set,
+          enter it here. Otherwise, skip to add without authentication.
         </p>
         <input
           v-model="devicePassword"
           type="password"
-          placeholder="Super secret password"
+          placeholder="Super secret password (optional)"
           class="w-full dark:bg-neutral-800 bg-neutral-100 dark:text-white text-black rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 ring-blue-500 mb-2"
-          @keyup.enter="addDevice"
+          @keyup.enter="addDevice()"
           @keyup.esc="cancelPasswordPrompt"
         />
-        <p v-if="passwordError" class="text-xs text-red-500 mb-3">{{ passwordError }}</p>
         <div class="flex gap-2">
           <button
-            class="flex-1 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
+            class="flex-1 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 transition-colors"
             @click="cancelPasswordPrompt"
           >
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            class="flex-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!devicePassword"
-            @click="addDevice"
+            @click="addDevice()"
           >
-            Add Device
+            Add
           </button>
         </div>
       </div>

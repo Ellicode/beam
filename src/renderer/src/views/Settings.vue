@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderSync, UserRoundPen, FolderDown, Lock, Eye, EyeOff } from 'lucide-vue-next'
+import { FolderSync, UserRoundPen, FolderDown, Lock } from 'lucide-vue-next'
 import Switch from '../components/Switch.vue'
 import { useSettings } from '../composables/useSettings'
 import { ref, watch, onMounted } from 'vue'
@@ -11,12 +11,6 @@ const downloadPath = useSetting('downloadPath')
 
 const displayPath = ref(downloadPath.value || '')
 const hasPassword = ref(false)
-const showPasswordSetup = ref(false)
-const showPassword = ref(false)
-const newPassword = ref('')
-const confirmPassword = ref('')
-const passwordError = ref('')
-const passwordSuccess = ref('')
 
 watch(downloadPath, (newPath) => {
   displayPath.value = newPath || ''
@@ -33,44 +27,16 @@ const selectDownloadFolder = async (): Promise<void> => {
   }
 }
 
-const togglePasswordSetup = (): void => {
-  showPasswordSetup.value = !showPasswordSetup.value
-  newPassword.value = ''
-  confirmPassword.value = ''
-  passwordError.value = ''
-  passwordSuccess.value = ''
-  showPassword.value = false
+const openPasswordSetup = (): void => {
+  window.electron.ipcRenderer.send('open-password-setup')
 }
 
-const setPassword = async (): Promise<void> => {
-  passwordError.value = ''
-  passwordSuccess.value = ''
-
-  if (newPassword.value.length < 8) {
-    passwordError.value = 'Password must be at least 8 characters'
-    return
-  }
-
-  if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = 'Passwords do not match'
-    return
-  }
-
-  try {
-    await window.api.settings.setPassword(newPassword.value)
-    hasPassword.value = true
-    passwordSuccess.value = 'Password set successfully'
-    setTimeout(() => {
-      showPasswordSetup.value = false
-      newPassword.value = ''
-      confirmPassword.value = ''
-      passwordSuccess.value = ''
-    }, 1500)
-  } catch (error) {
-    passwordError.value = 'Failed to set password'
-    console.error('Password setup error:', error)
-  }
-}
+// Listen for settings changes to update password status
+window.api.settings.onChanged(() => {
+  window.api.settings.hasPassword().then((status) => {
+    hasPassword.value = status
+  })
+})
 </script>
 
 <template>
@@ -143,68 +109,10 @@ const setPassword = async (): Promise<void> => {
       </div>
       <button
         class="dark:bg-neutral-800 bg-neutral-200 dark:text-white text-black rounded-lg text-sm px-3 py-1.5 hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors"
-        @click="togglePasswordSetup"
+        @click="openPasswordSetup"
       >
         {{ hasPassword ? 'Change Password' : 'Set Password' }}
       </button>
-    </div>
-
-    <!-- Password Setup Form -->
-    <div
-      v-if="showPasswordSetup"
-      class="mt-3 p-4 dark:bg-neutral-800 bg-neutral-100 rounded-lg border dark:border-white/10 border-black/10"
-    >
-      <div class="mb-3">
-        <label class="text-xs dark:text-neutral-400 text-neutral-500 select-none mb-1 block"
-          >New Password</label
-        >
-        <div class="relative">
-          <input
-            v-model="newPassword"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Enter password (min 8 characters)"
-            class="w-full dark:bg-neutral-900 bg-white dark:text-white text-black rounded-lg text-sm px-3 py-2 outline-0 focus:ring-2 ring-blue-500 pr-10"
-            @keyup.enter="setPassword"
-          />
-          <button
-            type="button"
-            class="absolute right-2 top-1/2 -translate-y-1/2 dark:text-neutral-400 text-neutral-500 hover:dark:text-white hover:text-black transition-colors"
-            @click="showPassword = !showPassword"
-          >
-            <Eye v-if="!showPassword" class="w-4 h-4" />
-            <EyeOff v-else class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <div class="mb-3">
-        <label class="text-xs dark:text-neutral-400 text-neutral-500 select-none mb-1 block"
-          >Confirm Password</label
-        >
-        <input
-          v-model="confirmPassword"
-          :type="showPassword ? 'text' : 'password'"
-          placeholder="Re-enter password"
-          class="w-full dark:bg-neutral-900 bg-white dark:text-white text-black rounded-lg text-sm px-3 py-2 outline-0 focus:ring-2 ring-blue-500"
-          @keyup.enter="setPassword"
-        />
-      </div>
-      <p v-if="passwordError" class="text-xs text-red-500 mb-2">{{ passwordError }}</p>
-      <p v-if="passwordSuccess" class="text-xs text-green-500 mb-2">{{ passwordSuccess }}</p>
-      <div class="flex gap-2">
-        <button
-          class="flex-1 px-4 py-2 rounded-lg text-sm dark:bg-white/10 bg-black/10 hover:dark:bg-white/20 hover:bg-black/20 transition-colors"
-          @click="togglePasswordSetup"
-        >
-          Cancel
-        </button>
-        <button
-          class="flex-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!newPassword || !confirmPassword"
-          @click="setPassword"
-        >
-          Save Password
-        </button>
-      </div>
     </div>
   </div>
 </template>
