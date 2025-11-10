@@ -44,7 +44,7 @@ window.api.settings.onChanged(() => {
     <h2 class="uppercase text-xs mb-4 dark:text-neutral-400 text-neutral-500 select-none">
       General
     </h2>
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between mb-5">
       <div class="flex items-center">
         <FolderSync class="w-5 h-5 me-4" />
         <div>
@@ -56,8 +56,7 @@ window.api.settings.onChanged(() => {
       </div>
       <Switch v-model="transferOnDrop" />
     </div>
-    <h2 class="uppercase text-xs my-4 dark:text-neutral-400 text-neutral-500 select-none">Files</h2>
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-5">
       <div class="flex items-center flex-1">
         <FolderDown class="w-5 h-5 me-4" />
         <div class="flex-1">
@@ -77,7 +76,7 @@ window.api.settings.onChanged(() => {
     <h2 class="uppercase text-xs my-4 dark:text-neutral-400 text-neutral-500 select-none">
       Connectivity
     </h2>
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-5">
       <div class="flex items-center">
         <UserRoundPen class="w-5 h-5 me-4" />
         <div>
@@ -94,10 +93,8 @@ window.api.settings.onChanged(() => {
         placeholder="My computer"
       />
     </div>
-    <h2 class="uppercase text-xs my-4 dark:text-neutral-400 text-neutral-500 select-none">
-      Security
-    </h2>
-    <div class="flex items-center justify-between mb-2">
+
+    <div class="flex items-center justify-between mb-5">
       <div class="flex items-center flex-1">
         <Lock class="w-5 h-5 me-4" />
         <div>

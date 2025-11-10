@@ -7,7 +7,7 @@ import {
   createPasswordSetupModal
 } from './windows'
 import { createAppMenu } from './menu'
-import { loadSettings, setupSettingsIPC } from './settings'
+import { loadSettings, setupSettingsIPC, ensureSettingsFile } from './settings'
 import { setupFileIconIPC } from './fileIcons'
 import { Bonjour } from 'bonjour-service'
 import { setupBonjourIPC } from './bonjour'
@@ -75,6 +75,8 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  await ensureSettingsFile()
+
   // Set up application menu
   const menu = createAppMenu(openSettingsWindow, openAddDeviceWindow)
   Menu.setApplicationMenu(menu)
@@ -90,7 +92,6 @@ app.whenReady().then(async () => {
 
   // Start file receiver server
   setupFileReceiver(PORT)
-
   // IPC handlers
   ipcMain.on('ping', () => console.log('pong'))
   ipcMain.on('open-settings', openSettingsWindow)

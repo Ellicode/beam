@@ -37,12 +37,14 @@ function getSettingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
 }
 
-async function ensureSettingsFile(): Promise<void> {
+export async function ensureSettingsFile(): Promise<void> {
   const settingsPath = getSettingsPath()
-  console.log(settingsPath)
-
   try {
     await fs.access(settingsPath)
+    const data = await fs.readFile(settingsPath, 'utf-8')
+    if (!data.trim()) {
+      await fs.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2))
+    }
   } catch {
     await fs.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2))
   }
