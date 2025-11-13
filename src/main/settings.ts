@@ -14,6 +14,7 @@ export interface Settings {
   superSecretPassword?: string
   passwordSalt?: string
   authKey?: string
+  hotCornerDisplayIndex?: number
   savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
@@ -21,6 +22,7 @@ const defaultSettings: Settings = {
   transferOnDrop: false,
   deviceName: hostname,
   downloadPath: app.getPath('downloads'),
+  hotCornerDisplayIndex: 0,
   savedDevices: []
 }
 
@@ -87,6 +89,15 @@ export function setupSettingsIPC(): void {
 
   ipcMain.handle('settings:update', async (_, key: keyof Settings, value: unknown) => {
     return await updateSetting(key, value as Settings[typeof key])
+  })
+
+  ipcMain.handle('settings:removePassword', async () => {
+    const settings = settingsCache || (await loadSettings())
+    delete settings.superSecretPassword
+    delete settings.passwordSalt
+    delete settings.authKey
+    await saveSettings(settings)
+    return { ...settings }
   })
 
   ipcMain.handle('settings:selectDownloadPath', async () => {

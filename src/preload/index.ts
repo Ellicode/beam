@@ -18,6 +18,18 @@ export interface FileTransferRequest {
   authKey?: string
 }
 
+type OverlayBounds = { width: number; height: number; x: number; y: number }
+
+type OverlayDisplayInfo = {
+  id: number
+  index: number
+  name: string
+  isPrimary: boolean
+  internal: boolean
+  scaleFactor: number
+  workArea: { x: number; y: number; width: number; height: number }
+}
+
 // Custom APIs for renderer
 const api = {
   settings: {
@@ -37,9 +49,11 @@ const api = {
     onChanged: (callback: () => void) => {
       ipcRenderer.on('settings:changed', callback)
       return () => ipcRenderer.removeListener('settings:changed', callback)
-    }
+    },
+    removePassword: (): Promise<Settings> => ipcRenderer.invoke('settings:removePassword')
   },
   file: {
+    startDrag: (files: Array<string>): void => ipcRenderer.send('file:ondragstart', files),
     getThumbnail: (filePath: string): Promise<string | null> =>
       ipcRenderer.invoke('file:getThumbnail', filePath),
     getPathForFile: (file: File): string => webUtils.getPathForFile(file),
@@ -132,6 +146,34 @@ const api = {
       ipcRenderer.on('file-receive:complete', listener)
       return () => ipcRenderer.removeListener('file-receive:complete', listener)
     }
+  },
+  overlay: {
+    startGlobalMouseTracking: (): void => ipcRenderer.send('overlay:start-mouse-tracking'),
+    stopGlobalMouseTracking: (): void => ipcRenderer.send('overlay:stop-mouse-tracking'),
+    onGlobalMouseMove: (callback: (position: { x: number; y: number }) => void): (() => void) => {
+      const listener = (_: unknown, position: { x: number; y: number }): void => {
+        callback(position)
+      }
+      ipcRenderer.on('overlay:mouse-move', listener)
+      return () => ipcRenderer.removeListener('overlay:mouse-move', listener)
+    },
+    setPosition: (position: { x: number; y: number }): void =>
+      ipcRenderer.send('overlay:set-position', position),
+    getSize: (): Promise<OverlayBounds> => ipcRenderer.invoke('overlay:get-size'),
+    getPrimaryBounds: (): Promise<OverlayBounds> =>
+      ipcRenderer.invoke('overlay:get-primary-bounds'),
+    getDisplays: (): Promise<OverlayDisplayInfo[]> => ipcRenderer.invoke('overlay:get-displays'),
+    setDisplay: (displayIndex: number): Promise<OverlayBounds> =>
+      ipcRenderer.invoke('overlay:set-display', displayIndex),
+    onBoundsChanged: (callback: (bounds: OverlayBounds) => void): (() => void) => {
+      const listener = (_: unknown, bounds: OverlayBounds): void => {
+        callback(bounds)
+      }
+      ipcRenderer.on('overlay:bounds-changed', listener)
+      return () => ipcRenderer.removeListener('overlay:bounds-changed', listener)
+    },
+    summonMainWindowAt: (position: { x: number; y: number }): void =>
+      ipcRenderer.send('overlay:summon-main-window-at', position)
   }
 }
 

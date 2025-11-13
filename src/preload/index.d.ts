@@ -7,7 +7,20 @@ export interface Settings {
   superSecretPassword?: string
   passwordSalt?: string
   authKey?: string
+  useHotCorners?: boolean
+  hotCornerPosition?: { x: number; y: number }
+  hotCornerDisplayIndex?: number
   savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
+}
+
+export interface OverlayDisplayInfo {
+  id: number
+  index: number
+  name: string
+  isPrimary: boolean
+  internal: boolean
+  scaleFactor: number
+  workArea: { x: number; y: number; width: number; height: number }
 }
 
 export interface SettingsAPI {
@@ -20,9 +33,11 @@ export interface SettingsAPI {
   hasPassword: () => Promise<boolean>
   getAuthKey: (password: string) => Promise<string>
   onChanged: (callback: () => void) => () => void
+  removePassword: () => Promise<Settings>
 }
 
 export interface FileAPI {
+  startDrag: (files: Array<string>) => void
   getThumbnail: (filePath: string) => Promise<string | null>
   getPathForFile: (file: File) => string
   tryQuickLook: (filePath: string) => Promise<void>
@@ -83,6 +98,23 @@ export interface TransferAPI {
   ) => () => void
 }
 
+export interface OverlayAPI {
+  startGlobalMouseTracking: () => void
+  stopGlobalMouseTracking: () => void
+  onGlobalMouseMove: (callback: (position: { x: number; y: number }) => void) => () => void
+  setPosition: (position: { x: number; y: number }) => void
+  getSize: () => Promise<{ width: number; height: number; x: number; y: number }>
+  getPrimaryBounds: () => Promise<{ width: number; height: number; x: number; y: number }>
+  getDisplays: () => Promise<OverlayDisplayInfo[]>
+  setDisplay: (
+    displayIndex: number
+  ) => Promise<{ width: number; height: number; x: number; y: number }>
+  onBoundsChanged: (
+    callback: (bounds: { width: number; height: number; x: number; y: number }) => void
+  ) => () => void
+  summonMainWindowAt: (position: { x: number; y: number }) => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -91,6 +123,7 @@ declare global {
       file: FileAPI
       bonjour: BonjourAPI
       transfer: TransferAPI
+      overlay: OverlayAPI
     }
   }
 }

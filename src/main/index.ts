@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeImage } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import {
   createAddDeviceModal,
@@ -13,15 +13,49 @@ import { Bonjour } from 'bonjour-service'
 import { setupBonjourIPC } from './bonjour'
 import { startSignalingServer } from './signaling'
 import { setupPeerTransferIPC, setupFileReceiver } from './peer'
+import { setupOverlay, shutdownOverlay } from './overlay'
 
 let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
 let passwordSetupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
-
 const bonjour = new Bonjour()
 const PORT = 4000
 const SIGNALING_PORT = 4001
+
+function bootstrapBackgroundServices(): void {
+  setImmediate(() => {
+    try {
+      startSignalingServer(SIGNALING_PORT)
+    } catch (error) {
+      console.error('Failed to start signaling server', error)
+    }
+
+    try {
+      setupFileReceiver(PORT)
+    } catch (error) {
+      console.error('Failed to start file receiver server', error)
+    }
+  })
+}
+
+function scheduleBonjourPublish(): void {
+  setImmediate(async () => {
+    try {
+      const settings = await loadSettings()
+      const baseName =
+        settings.deviceName && settings.deviceName.trim().length > 0
+          ? settings.deviceName
+          : 'Unknown device'
+      const deviceName = `${baseName}#${Math.floor(Math.random() * 1000)}`
+      console.log(`Publishing service: ${deviceName} on port ${PORT}`)
+      bonjour.publish({ name: deviceName, type: 'file-transfer-app', port: PORT })
+      console.log('Bonjour service published')
+    } catch (error) {
+      console.error('Failed to publish Bonjour service', error)
+    }
+  })
+}
 
 function openSettingsWindow(): void {
   if (settingsWindow) {
@@ -65,7 +99,7 @@ function openPasswordSetupWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -75,7 +109,7 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  await ensureSettingsFile()
+  const settingsReady = ensureSettingsFile()
 
   // Set up application menu
   const menu = createAppMenu(openSettingsWindow, openAddDeviceWindow)
@@ -87,11 +121,6 @@ app.whenReady().then(async () => {
   setupFileIconIPC()
   setupPeerTransferIPC()
 
-  // Start signaling server for WebRTC
-  startSignalingServer(SIGNALING_PORT)
-
-  // Start file receiver server
-  setupFileReceiver(PORT)
   // IPC handlers
   ipcMain.on('ping', () => console.log('pong'))
   ipcMain.on('open-settings', openSettingsWindow)
@@ -107,25 +136,51 @@ app.whenReady().then(async () => {
       passwordSetupWindow.close()
     }
   })
-
+  ipcMain.on('close-active-window', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      win.close()
+    }
+  })
+  setupOverlay({
+    ensureMainWindow: () => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        mainWindow = createMainWindow()
+      }
+      return mainWindow
+    },
+    settingsReady
+  })
   // Create the main window first
   mainWindow = createMainWindow()
-
   ipcMain.handle('file:tryQuickLook', async (_, filePath: string) => {
     if (process.platform === 'darwin') {
       mainWindow?.previewFile(filePath)
     }
   })
-
-  // Set up bonjour service asynchronously (don't block startup)
-  setTimeout(async () => {
-    const settings = await loadSettings()
-    const deviceName =
-      settings.deviceName + '#' + Math.floor(Math.random() * 1000) || 'Unknown device'
-    console.log(`Publishing service: ${deviceName} on port ${PORT}`)
-    bonjour.publish({ name: deviceName, type: 'file-transfer-app', port: PORT })
-    console.log('Bonjour service published')
-  }, 0)
+  ipcMain.on('file:ondragstart', async (event, files: string[]) => {
+    event.preventDefault()
+    const fileThumbnail = await nativeImage.createThumbnailFromPath(files[0], {
+      width: 64,
+      height: 64
+    })
+    const icon = fileThumbnail.isEmpty() ? undefined : fileThumbnail
+    event.sender.startDrag({
+      file: files[0],
+      files: files,
+      icon: icon ?? ''
+    })
+  })
+  settingsReady
+    .then(() => {
+      scheduleBonjourPublish()
+    })
+    .catch((error) => {
+      console.error('Failed to initialize settings file', error)
+    })
+    .finally(() => {
+      bootstrapBackgroundServices()
+    })
 
   // Create the main window
   app.on('activate', function () {
@@ -147,6 +202,7 @@ app.whenReady().then(async () => {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    shutdownOverlay()
     app.quit()
   }
 })

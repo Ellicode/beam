@@ -46,9 +46,9 @@ const closeModal = (): void => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col dark:text-white text-black">
+  <div class="dark:text-white text-black">
     <!-- Content -->
-    <div class="flex-1 p-3 flex flex-col">
+    <div class="flex-1 p-3">
       <div class="mb-3">
         <h2 class="text-sm font-semibold mb-1">
           {{ hasPassword ? 'Change Password' : 'Set Password' }}
@@ -66,7 +66,7 @@ const closeModal = (): void => {
         </p>
       </div>
 
-      <div class="space-y-4 flex-1">
+      <div class="space-y-4">
         <div>
           <label class="text-xs dark:text-neutral-400 text-neutral-500 select-none mb-1 block"
             >New Password</label
@@ -76,7 +76,7 @@ const closeModal = (): void => {
               v-model="newPassword"
               :type="showPassword ? 'text' : 'password'"
               placeholder="Enter password (min 8 characters)"
-              class="w-full dark:bg-white/5 bg-black/5 dark:text-white text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500 pr-10"
+              class="w-full dark:bg-white/5 bg-black/5 ring-offset-2 dark:ring-offset-neutral-800 dark:text-white text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500 pr-10"
               @keyup.enter="setPassword"
             />
             <button
@@ -98,13 +98,13 @@ const closeModal = (): void => {
             v-model="confirmPassword"
             :type="showPassword ? 'text' : 'password'"
             placeholder="Re-enter password"
-            class="w-full dark:bg-white/5 bg-black/5 dark:text-white text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500"
+            class="w-full dark:bg-white/5 bg-black/5 dark:text-white ring-offset-2 dark:ring-offset-neutral-800 text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500"
             @keyup.enter="setPassword"
           />
         </div>
       </div>
 
-      <div class="flex gap-2 mt-6">
+      <div class="flex gap-2 mt-4">
         <button
           class="flex-1 px-4 py-2.5 rounded-xl text-sm dark:bg-white/10 bg-black/10 transition-colors"
           @click="closeModal"

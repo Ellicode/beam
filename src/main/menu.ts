@@ -8,7 +8,7 @@ export function createAppMenu(onSettingsClick: () => void, onAddDeviceClick: () 
             role: 'appMenu' as const,
             submenu: [
               {
-                label: 'Settings',
+                label: 'Preferences...',
                 click: onSettingsClick,
                 accelerator: 'CommandOrControl+,'
               }
@@ -22,7 +22,7 @@ export function createAppMenu(onSettingsClick: () => void, onAddDeviceClick: () 
             role: 'fileMenu' as const,
             submenu: [
               {
-                label: 'Settings',
+                label: 'Preferences...',
                 click: onSettingsClick,
                 accelerator: 'CommandOrControl+,'
               },

@@ -2,14 +2,9 @@
 import { Cloud } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 
-interface Props {
-  files: Array<File & { path?: string }>
-}
-
-const props = defineProps<Props>()
-
+const files = defineModel<Array<File & { path?: string }>>()
 // Show max 3 files in the stack
-const displayFiles = computed(() => props.files.slice(-3).reverse())
+const displayFiles = computed(() => files.value?.slice(-3).reverse())
 
 // Store thumbnails for each file
 const thumbnails = ref<Map<string, string>>(new Map())
@@ -46,8 +41,9 @@ const getThumbnailOrIcon = (file: File & { path?: string }): string | null => {
 
 // Watch for file changes and load thumbnails
 watch(
-  () => props.files,
+  () => files.value,
   (newFiles) => {
+    if (!newFiles) return
     console.log('Files changed, count:', newFiles.length, 'files:', newFiles)
     newFiles.forEach((file) => {
       console.log(
@@ -78,27 +74,35 @@ const quickLookFile = async (file: File & { path?: string }): Promise<void> => {
     console.error('Failed to open Quick Look:', error)
   }
 }
+
+const onDragStart = (event: DragEvent): void => {
+  console.log(event)
+  files.value = []
+  event.preventDefault()
+  const fileData = files.value?.map((file) => file.path || '').filter((path) => path !== '')
+  window.api.file.startDrag(fileData || [])
+}
 </script>
 
 <template>
-  <div class="flex flex-col items-center">
+  <div class="flex flex-col items-center" @dragstart="onDragStart">
     <TransitionGroup
       name="file"
       tag="div"
       class="relative w-16 h-16 flex items-center justify-center mb-3"
     >
-      <Cloud v-if="props.files.length === 0" class="w-16 h-16" />
+      <Cloud v-if="files?.length === 0" class="w-16 h-16" />
 
       <template v-for="(file, index) in displayFiles" :key="file.name + file.size">
         <img
           v-if="getThumbnailOrIcon(file)"
           :src="getThumbnailOrIcon(file)!"
-          class="absolute w-14 h-14 rounded object-contain select-none drop-shadow-lg drop-shadow-black/20 dark:drop-shadow-black/50 transition-all duration-200"
-          draggable="false"
+          class="absolute w-14 h-14 rounded object-contain select-none drop-shadow-lg drop-shadow-black/20 dark:drop-shadow-black/50 transition-all duration-200 cursor-grab active:cursor-grabbing"
+          draggable="true"
           alt="File icon"
           :style="{
             transform: `rotate(${getRotation(index)}deg)`,
-            zIndex: displayFiles.length - index,
+            zIndex: displayFiles ? displayFiles.length - index : 0,
             left: `${index * 2}px`,
             top: `${index * 2}px`
           }"
@@ -106,10 +110,11 @@ const quickLookFile = async (file: File & { path?: string }): Promise<void> => {
         />
         <div
           v-else
-          class="absolute w-14 h-14 text-4xl select-none transition-all duration-200 outlined"
+          class="absolute w-14 h-14 text-4xl select-none transition-all duration-200 outlined cursor-grab active:cursor-grabbing"
+          draggable="true"
           :style="{
             transform: `rotate(${getRotation(index)}deg)`,
-            zIndex: displayFiles.length - index,
+            zIndex: displayFiles ? displayFiles.length - index : 0,
             left: `${index * 2}px`,
             top: `${index * 2}px`
           }"
@@ -119,20 +124,20 @@ const quickLookFile = async (file: File & { path?: string }): Promise<void> => {
       </template>
     </TransitionGroup>
     <p
-      v-if="displayFiles.length > 0"
+      v-if="displayFiles && displayFiles.length > 0"
       class="text-xs select-none font-medium text-center dark:text-white/70 text-black/70"
     >
       <span
         class="inline-block truncate align-middle"
         title="{{ displayFiles[0].name }}"
         :class="{
-          'max-w-[4em]': props.files.length > 1,
-          'max-w-[16em]': props.files.length === 1
+          'max-w-[4em]': files && files.length > 1,
+          'max-w-[16em]': files && files.length === 1
         }"
       >
         {{ displayFiles[0].name }}
       </span>
-      {{ props.files.length > 1 ? `and ${props.files.length - 1} more file(s)` : '' }}
+      {{ files && files.length > 1 ? `and ${files.length - 1} more file(s)` : '' }}
     </p>
   </div>
 </template>

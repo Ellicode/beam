@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, shell } from 'electron'
+import { BrowserWindow, nativeTheme, shell, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -50,6 +50,44 @@ export function createMainWindow(): BrowserWindow {
   }
 
   return mainWindow
+}
+
+export function createOverlayWindow(): BrowserWindow {
+  const screenSize = {
+    width: screen.getPrimaryDisplay().workAreaSize.width,
+    height: screen.getPrimaryDisplay().workAreaSize.height
+  }
+
+  const overlayWindow = new BrowserWindow({
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    hasShadow: false,
+    show: false,
+    width: screenSize.width,
+    height: screenSize.height,
+    acceptFirstMouse: true,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+  overlayWindow.on('ready-to-show', () => {
+    overlayWindow.show()
+  })
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true }) // Let clicks pass through
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    overlayWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/overlay')
+  } else {
+    overlayWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: 'overlay'
+    })
+  }
+
+  return overlayWindow
 }
 
 export function createSettingsWindow(): BrowserWindow {

@@ -3,6 +3,7 @@ import Home from '../views/Home.vue'
 import Settings from '../views/Settings.vue'
 import AddDevice from '@renderer/views/AddDevice.vue'
 import PasswordSetup from '@renderer/views/PasswordSetup.vue'
+import Overlay from '@renderer/views/Overlay.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -27,7 +28,8 @@ const router = createRouter({
       path: '/add-device',
       name: 'add-device',
       meta: {
-        windowTitle: 'Add Device'
+        windowTitle: 'Add Device',
+        isModal: true
       },
       component: AddDevice
     },
@@ -35,9 +37,20 @@ const router = createRouter({
       path: '/password-setup',
       name: 'password-setup',
       meta: {
-        windowTitle: 'Password Setup'
+        windowTitle: 'Password Setup',
+        isModal: true
       },
       component: PasswordSetup
+    },
+    {
+      path: '/overlay',
+      name: 'overlay',
+      meta: {
+        windowTitle: 'Overlay',
+        isOverlay: true
+      },
+      // Lazy load the overlay component
+      component: Overlay
     }
   ]
 })

@@ -7,6 +7,9 @@ interface Settings {
   superSecretPassword?: string
   passwordSalt?: string
   authKey?: string
+  useHotCorners?: boolean
+  hotCornerPosition?: { x: number; y: number }
+  hotCornerDisplayIndex?: number
   savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
@@ -16,6 +19,9 @@ const settings = ref<Settings>({
   transferOnDrop: false,
   deviceName: '',
   downloadPath: '',
+  useHotCorners: false,
+  hotCornerPosition: { x: 0, y: 0 },
+  hotCornerDisplayIndex: 0,
   savedDevices: []
 })
 

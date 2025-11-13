@@ -21,8 +21,18 @@ const transferProgress = ref<Map<string, FileTransferProgress>>(new Map())
 const isTransferring = ref(false)
 let progressUnsubscribe: (() => void) | null = null
 
-function onDrop(files: File[] | null): void {
+async function onDrop(files: File[] | null): Promise<void> {
   if (files) {
+    const windowBounds = await window.api.overlay.getPrimaryBounds()
+    console.log(windowBounds)
+
+    window.api.overlay.setPosition({
+      x: windowBounds.x + (windowBounds.width - 250) / 2,
+      y: windowBounds.y + (windowBounds.height - 250) / 2
+    })
+    console.log('Files dropped', files)
+    // Check if files already exists
+
     // Add file paths using webUtils
     const filesWithPaths = files.map((file) => {
       const fileWithPath = file as File & { path?: string }
@@ -223,7 +233,7 @@ const clearFiles = (): void => {
           'text-blue-600 dark:text-blue-400': isOverDropZone
         }"
       >
-        <FileStack :files="filePool" />
+        <FileStack v-model="filePool" />
         <p
           class="select-none text-sm mt-3 flex items-center gap-2"
           :class="{
