@@ -4,7 +4,8 @@ import {
   createAddDeviceModal,
   createMainWindow,
   createSettingsWindow,
-  createPasswordSetupModal
+  createPasswordSetupModal,
+  createAboutWindow
 } from './windows'
 import { createAppMenu } from './menu'
 import { loadSettings, setupSettingsIPC, ensureSettingsFile } from './settings'
@@ -19,6 +20,7 @@ let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
 let passwordSetupWindow: BrowserWindow | null = null
 let mainWindow: BrowserWindow | null = null
+let aboutWindow: BrowserWindow | null = null
 const bonjour = new Bonjour()
 const PORT = 4000
 const SIGNALING_PORT = 4001
@@ -83,6 +85,19 @@ function openAddDeviceWindow(): void {
   })
 }
 
+function openAboutWindow(): void {
+  if (aboutWindow) {
+    aboutWindow.focus()
+    return
+  }
+
+  aboutWindow = createAboutWindow()
+
+  aboutWindow.on('closed', () => {
+    aboutWindow = null
+  })
+}
+
 function openPasswordSetupWindow(): void {
   if (passwordSetupWindow) {
     passwordSetupWindow.focus()
@@ -112,7 +127,7 @@ app.whenReady().then(() => {
   const settingsReady = ensureSettingsFile()
 
   // Set up application menu
-  const menu = createAppMenu(openSettingsWindow, openAddDeviceWindow)
+  const menu = createAppMenu(openSettingsWindow, openAddDeviceWindow, openAboutWindow)
   Menu.setApplicationMenu(menu)
 
   // Set up IPC handlers

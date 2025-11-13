@@ -1,6 +1,10 @@
 import { Menu, MenuItemConstructorOptions } from 'electron'
 
-export function createAppMenu(onSettingsClick: () => void, onAddDeviceClick: () => void): Menu {
+export function createAppMenu(
+  onSettingsClick: () => void,
+  onAddDeviceClick: () => void,
+  onAboutClick: () => void
+): Menu {
   const template: MenuItemConstructorOptions[] = [
     ...(process.platform === 'darwin'
       ? [
@@ -11,6 +15,10 @@ export function createAppMenu(onSettingsClick: () => void, onAddDeviceClick: () 
                 label: 'Preferences...',
                 click: onSettingsClick,
                 accelerator: 'CommandOrControl+,'
+              },
+              {
+                label: 'About File Transfer App',
+                click: onAboutClick
               }
             ]
           }
@@ -25,6 +33,10 @@ export function createAppMenu(onSettingsClick: () => void, onAddDeviceClick: () 
                 label: 'Preferences...',
                 click: onSettingsClick,
                 accelerator: 'CommandOrControl+,'
+              },
+              {
+                label: 'About File Transfer App',
+                click: onAboutClick
               },
               {
                 label: 'Add Device',

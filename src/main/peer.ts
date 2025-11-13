@@ -1,5 +1,5 @@
 import { BrowserWindow, ipcMain } from 'electron'
-import { promises as fs } from 'fs'
+import { createReadStream } from 'fs'
 import path from 'path'
 import { loadSettings } from './settings'
 import { request as httpRequest } from 'http'
@@ -168,47 +168,61 @@ async function sendFileToPeer(
       headers
     }
 
-    const req = httpRequest(options, (res) => {
-      if (res.statusCode === 200) {
-        resolve()
-      } else {
-        reject(new Error(`Transfer failed with status ${res.statusCode}`))
+    const req = httpRequest(options)
+
+    let completed = false
+    const finalize = (error?: Error): void => {
+      if (completed) {
+        return
       }
-    })
-
-    req.on('error', (error) => {
-      reject(error)
-    })
-
-    // Read and send file
-    const sendFile = async (): Promise<void> => {
-      try {
-        const fileHandle = await fs.open(file.path, 'r')
-        const buffer = Buffer.allocUnsafe(CHUNK_SIZE)
-        let bytesRead = 0
-
-        while (bytesRead < file.size) {
-          const { bytesRead: chunkSize } = await fileHandle.read(buffer, 0, CHUNK_SIZE, bytesRead)
-
-          if (chunkSize === 0) break
-
-          req.write(buffer.slice(0, chunkSize))
-
-          bytesRead += chunkSize
-          onProgress(bytesRead)
-
-          await new Promise((r) => setTimeout(r, 5))
-        }
-
-        await fileHandle.close()
-        req.end()
-      } catch (error) {
-        req.destroy()
+      completed = true
+      if (error) {
         reject(error)
+      } else {
+        resolve()
       }
     }
 
-    sendFile()
+    req.on('response', (res) => {
+      if (res.statusCode !== 200) {
+        finalize(new Error(`Transfer failed with status ${res.statusCode}`))
+        res.resume()
+        return
+      }
+      res.on('data', () => {})
+      res.on('end', () => finalize())
+    })
+
+    req.on('error', (error) => {
+      finalize(error)
+    })
+
+    const readStream = createReadStream(file.path, { highWaterMark: CHUNK_SIZE })
+    let bytesSent = 0
+
+    readStream.on('data', (chunk) => {
+      bytesSent += chunk.length
+      onProgress(bytesSent)
+      const canContinue = req.write(chunk)
+      if (!canContinue) {
+        readStream.pause()
+      }
+    })
+
+    req.on('drain', () => {
+      if (!readStream.destroyed) {
+        readStream.resume()
+      }
+    })
+
+    readStream.on('end', () => {
+      req.end()
+    })
+
+    readStream.on('error', (error) => {
+      req.destroy(error)
+      finalize(error)
+    })
   })
 }
 

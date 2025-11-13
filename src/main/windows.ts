@@ -244,3 +244,47 @@ export function createPasswordSetupModal(parentWindow?: BrowserWindow): BrowserW
 
   return passwordModal
 }
+
+export function createAboutWindow(): BrowserWindow {
+  const aboutWindow = new BrowserWindow({
+    width: 300,
+    height: 400,
+    show: false,
+    resizable: false,
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
+    titleBarStyle: 'hidden',
+    ...(process.platform !== 'darwin'
+      ? {
+          titleBarOverlay: {
+            color: '#00000000',
+            symbolColor: nativeTheme.shouldUseDarkColors ? '#ffffff' : '#000000',
+            height: 32
+          }
+        }
+      : {}),
+    ...(process.platform === 'linux' ? { icon } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  aboutWindow.on('ready-to-show', () => {
+    aboutWindow.show()
+  })
+
+  aboutWindow.webContents.setWindowOpenHandler((details) => {
+    shell.openExternal(details.url)
+    return { action: 'deny' }
+  })
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    aboutWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/about')
+  } else {
+    aboutWindow.loadFile(join(__dirname, '../renderer/index.html'), {
+      hash: 'about'
+    })
+  }
+
+  return aboutWindow
+}

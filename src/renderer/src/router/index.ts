@@ -4,6 +4,7 @@ import Settings from '../views/Settings.vue'
 import AddDevice from '@renderer/views/AddDevice.vue'
 import PasswordSetup from '@renderer/views/PasswordSetup.vue'
 import Overlay from '@renderer/views/Overlay.vue'
+import About from '@renderer/views/About.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -49,8 +50,15 @@ const router = createRouter({
         windowTitle: 'Overlay',
         isOverlay: true
       },
-      // Lazy load the overlay component
       component: Overlay
+    },
+    {
+      path: '/about',
+      name: 'about',
+      meta: {
+        windowTitle: 'About'
+      },
+      component: About
     }
   ]
 })
