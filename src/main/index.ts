@@ -15,6 +15,7 @@ import { setupBonjourIPC } from './bonjour'
 import { startSignalingServer } from './signaling'
 import { setupPeerTransferIPC, setupFileReceiver } from './peer'
 import { setupOverlay, shutdownOverlay } from './overlay'
+import { createSystemTray, destroyTray } from './tray'
 
 let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
@@ -168,6 +169,10 @@ app.whenReady().then(() => {
   })
   // Create the main window first
   mainWindow = createMainWindow()
+
+  // Create system tray
+  createSystemTray(() => mainWindow)
+
   ipcMain.handle('file:tryQuickLook', async (_, filePath: string) => {
     if (process.platform === 'darwin') {
       mainWindow?.previewFile(filePath)
@@ -217,6 +222,7 @@ app.whenReady().then(() => {
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    destroyTray()
     shutdownOverlay()
     app.quit()
   }

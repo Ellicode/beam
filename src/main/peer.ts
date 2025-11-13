@@ -1,5 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron'
-import { createReadStream } from 'fs'
+import { BrowserWindow, ipcMain, Notification, shell } from 'electron'
+import { createReadStream, promises as fsPromises } from 'fs'
 import path from 'path'
 import { loadSettings } from './settings'
 import { request as httpRequest } from 'http'
@@ -448,6 +448,51 @@ export function setupFileReceiver(port: number): void {
 
         writeStream.on('finish', () => {
           console.log(`File saved successfully: ${filePath} (${bytesReceived} bytes)`)
+
+          const notification = new Notification({
+            actions: [
+              {
+                text: 'Open File',
+                type: 'button'
+              },
+              {
+                text: 'Discard',
+                type: 'button'
+              }
+            ],
+            title: 'File Received',
+            body: `Received file: ${fileName}`
+          })
+
+          notification.on('action', async (_event, index) => {
+            if (index === 0) {
+              // Open File
+              try {
+                await shell.openPath(filePath)
+              } catch (error) {
+                console.error('Failed to open file:', error)
+              }
+            } else if (index === 1) {
+              // Discard
+              try {
+                await fsPromises.unlink(filePath)
+                console.log(`Discarded file: ${filePath}`)
+              } catch (error) {
+                console.error('Failed to delete file:', error)
+              }
+            }
+          })
+
+          notification.on('click', async () => {
+            // On click, also open the file
+            try {
+              await shell.openPath(filePath)
+            } catch (error) {
+              console.error('Failed to open file:', error)
+            }
+          })
+
+          notification.show()
 
           // Notify completion
           BrowserWindow.getAllWindows().forEach((window) => {
