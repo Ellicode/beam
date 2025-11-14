@@ -39,6 +39,11 @@ export function createMainWindow(): BrowserWindow {
     // }
   })
 
+  mainWindow.on('close', (event) => {
+    event.preventDefault()
+    mainWindow.hide()
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }

@@ -204,7 +204,7 @@ const previewStyle = computed(() => {
     height: `${handleHeight}px`,
     left: `${left}px`,
     top: `${top}px`,
-    transition: isDragging.value ? 'none' : 'all 200ms ease-in-out'
+    transition: isDragging.value ? 'none' : 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)'
   }
 })
 
@@ -323,7 +323,7 @@ window.api.settings.onChanged(() => {
         <div>
           <h3 class="font-semibold text-sm select-none">Hot corners</h3>
           <p class="text-xs dark:text-neutral-400 text-neutral-500 select-none">
-            Automatically transfer files when they are dropped into the application.
+            Automatically transfer files when they are dropped into the an area of your screen.
           </p>
         </div>
       </div>
@@ -352,7 +352,7 @@ window.api.settings.onChanged(() => {
     <div
       v-if="useHotCorners && screenSize.width > 0 && screenSize.height > 0"
       ref="containerRef"
-      class="bg-linear-to-tr transition-all duration-300 from-blue-300 mx-auto shadow-xl border-neutral-100 dark:border-neutral-700 to-blue-100 rounded-xl relative overflow-visible"
+      class="bg-linear-to-tr transition-all duration-300 from-blue-300 mx-auto shadow-xl outline-4 outline-neutral-100 dark:outline-neutral-700 to-blue-100 rounded-xl relative overflow-visible"
       :style="containerStyle"
     >
       <!-- Main window representation (scaled down) -->

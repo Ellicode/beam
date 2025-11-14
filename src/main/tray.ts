@@ -6,7 +6,7 @@ let tray: Tray | null = null
 export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tray {
   // Use a simple icon - you may want to replace this with a custom icon
   const icon = nativeImage.createEmpty()
-  
+
   // Try to load icon from resources, fallback to empty
   try {
     const iconPath = join(__dirname, '../../resources/icon.png')
@@ -28,7 +28,7 @@ export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tra
       label: 'Show App',
       click: () => {
         const mainWindow = getMainWindow()
-        if (mainWindow) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show()
           mainWindow.focus()
         }
@@ -50,7 +50,7 @@ export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tra
   // Click on tray icon to show/focus main window
   tray.on('click', () => {
     const mainWindow = getMainWindow()
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isVisible()) {
         mainWindow.focus()
       } else {
