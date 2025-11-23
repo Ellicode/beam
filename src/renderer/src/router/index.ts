@@ -13,7 +13,7 @@ const router = createRouter({
       path: '/',
       name: 'home',
       meta: {
-        windowTitle: 'File Transfer App'
+        windowTitle: 'Beam'
       },
       component: Home
     },

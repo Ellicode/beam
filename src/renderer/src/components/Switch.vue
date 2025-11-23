@@ -12,7 +12,7 @@ function toggle(): void {
     role="switch"
     :aria-checked="model"
     class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none dark:focus:ring-offset-neutral-900"
-    :class="model ? 'bg-blue-600 dark:bg-blue-500' : 'bg-neutral-300 dark:bg-neutral-600'"
+    :class="model ? 'bg-yellow-600 dark:bg-yellow-500' : 'bg-neutral-300 dark:bg-neutral-600'"
     @click="toggle"
   >
     <span

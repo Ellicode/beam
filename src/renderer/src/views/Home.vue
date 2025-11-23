@@ -230,7 +230,7 @@ const clearFiles = (): void => {
         class="flex flex-col items-center justify-center flex-1 transition-colors duration-200"
         :class="{
           'text-black/30 dark:text-white/30': !isOverDropZone,
-          'text-blue-600 dark:text-blue-400': isOverDropZone
+          'text-yellow-600 dark:text-yellow-400': isOverDropZone
         }"
       >
         <FileStack v-model="filePool" />

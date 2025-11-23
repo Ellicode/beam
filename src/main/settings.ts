@@ -28,6 +28,7 @@ const defaultSettings: Settings = {
 
 let settingsCache: Settings | null = null
 let fileWatcher: ReturnType<typeof watch> | null = null
+let writeQueue: Promise<void> = Promise.resolve()
 
 function notifySettingsChanged(): void {
   BrowserWindow.getAllWindows().forEach((window) => {
@@ -41,7 +42,12 @@ function getSettingsPath(): string {
 
 export async function ensureSettingsFile(): Promise<void> {
   const settingsPath = getSettingsPath()
+  const settingsDir = join(app.getPath('userData'))
+
   try {
+    // Ensure the directory exists
+    await fs.mkdir(settingsDir, { recursive: true })
+
     await fs.access(settingsPath)
     const data = await fs.readFile(settingsPath, 'utf-8')
     if (!data.trim()) {
@@ -55,16 +61,38 @@ export async function ensureSettingsFile(): Promise<void> {
 export async function loadSettings(): Promise<Settings> {
   await ensureSettingsFile()
   const settingsPath = getSettingsPath()
-  const data = await fs.readFile(settingsPath, 'utf-8')
-  settingsCache = { ...defaultSettings, ...JSON.parse(data) }
-  return settingsCache as Settings
+
+  try {
+    const data = await fs.readFile(settingsPath, 'utf-8')
+    const parsed = JSON.parse(data)
+    settingsCache = { ...defaultSettings, ...parsed }
+    return settingsCache as Settings
+  } catch (error) {
+    console.error('Failed to load settings, resetting to defaults:', error)
+    // If JSON is corrupted, reset to defaults
+    await fs.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2))
+    settingsCache = { ...defaultSettings }
+    return settingsCache
+  }
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
   const settingsPath = getSettingsPath()
-  await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2))
-  settingsCache = settings
-  notifySettingsChanged()
+
+  // Queue writes to prevent concurrent file access corruption
+  writeQueue = writeQueue.then(async () => {
+    try {
+      const jsonString = JSON.stringify(settings, null, 2)
+      await fs.writeFile(settingsPath, jsonString, 'utf-8')
+      settingsCache = settings
+      notifySettingsChanged()
+    } catch (error) {
+      console.error('Failed to save settings:', error)
+      throw error
+    }
+  })
+
+  await writeQueue
 }
 
 export async function updateSetting<K extends keyof Settings>(
@@ -77,7 +105,7 @@ export async function updateSetting<K extends keyof Settings>(
   return { ...settings }
 }
 
-export function setupSettingsIPC(): void {
+export async function setupSettingsIPC(): Promise<void> {
   ipcMain.handle('settings:load', async () => {
     return await loadSettings()
   })
@@ -161,11 +189,18 @@ export function setupSettingsIPC(): void {
     fileWatcher.close()
   }
 
-  fileWatcher = watch(settingsPath, async (eventType) => {
-    if (eventType === 'change') {
-      // Reload settings and notify all windows
-      await loadSettings()
-      notifySettingsChanged()
-    }
-  })
+  // Ensure settings file exists before watching
+  await ensureSettingsFile()
+
+  try {
+    fileWatcher = watch(settingsPath, async (eventType) => {
+      if (eventType === 'change') {
+        // Reload settings and notify all windows
+        await loadSettings()
+        notifySettingsChanged()
+      }
+    })
+  } catch (error) {
+    console.error('Failed to set up settings file watcher:', error)
+  }
 }

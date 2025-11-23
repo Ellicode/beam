@@ -1,7 +1,11 @@
 import { BrowserWindow, nativeTheme, shell, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import iconMac from '../../resources/icon_mac.png?asset'
+import iconGeneric from '../../resources/icon.png?asset'
+
+const icon = process.platform === 'darwin' ? iconMac : iconGeneric
+
 export function createMainWindow(): BrowserWindow {
   const mainWindow = new BrowserWindow({
     width: 250,
@@ -10,6 +14,7 @@ export function createMainWindow(): BrowserWindow {
     resizable: false,
     minimizable: false,
     titleBarStyle: 'hidden',
+    icon,
 
     ...(process.platform !== 'darwin'
       ? {
@@ -23,7 +28,6 @@ export function createMainWindow(): BrowserWindow {
 
     vibrancy: 'fullscreen-ui', // on MacOS
     backgroundMaterial: 'acrylic', // on Windows 11
-    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -104,6 +108,7 @@ export function createSettingsWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
     titleBarStyle: 'hidden',
+    icon,
 
     ...(process.platform !== 'darwin'
       ? {
@@ -114,7 +119,6 @@ export function createSettingsWindow(): BrowserWindow {
           }
         }
       : {}),
-    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -150,6 +154,7 @@ export function createAddDeviceModal(mainWindow?: BrowserWindow): BrowserWindow 
     show: false,
     resizable: false,
     titleBarStyle: 'hidden',
+    icon,
 
     ...(process.platform !== 'darwin'
       ? {
@@ -162,7 +167,6 @@ export function createAddDeviceModal(mainWindow?: BrowserWindow): BrowserWindow 
       : {}),
     vibrancy: 'fullscreen-ui', // on MacOS
     backgroundMaterial: 'acrylic', // on Windows 11
-    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -205,6 +209,7 @@ export function createPasswordSetupModal(parentWindow?: BrowserWindow): BrowserW
     show: false,
     resizable: false,
     titleBarStyle: 'hidden',
+    icon,
 
     ...(process.platform !== 'darwin'
       ? {
@@ -217,7 +222,6 @@ export function createPasswordSetupModal(parentWindow?: BrowserWindow): BrowserW
       : {}),
     vibrancy: 'fullscreen-ui', // on MacOS
     backgroundMaterial: 'acrylic', // on Windows 11
-    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -259,6 +263,7 @@ export function createAboutWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
     titleBarStyle: 'hidden',
+    icon,
     ...(process.platform !== 'darwin'
       ? {
           titleBarOverlay: {
@@ -268,7 +273,6 @@ export function createAboutWindow(): BrowserWindow {
           }
         }
       : {}),
-    ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false

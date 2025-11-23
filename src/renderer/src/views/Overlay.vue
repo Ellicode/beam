@@ -75,7 +75,8 @@ const applyOverlayBounds = (bounds: {
 }): void => {
   overlayBounds.value = { ...bounds }
 }
-
+let dropzoneEnterTimer: ReturnType<typeof setTimeout> | null = null
+const hotCornerTriggerTimeoutMs = useSetting('hotCornerTriggerTimeoutMs')
 const handleGlobalMouseMove = ({ x, y }: { x: number; y: number }): void => {
   const localX = x - overlayBounds.value.x
   const localY = y - overlayBounds.value.y
@@ -116,21 +117,32 @@ const handleGlobalMouseMove = ({ x, y }: { x: number; y: number }): void => {
   }
   overlayOpacity.value = opacity
 
-  // Only summon when mouse enters the drag zone (not just inside)
+  // Only summon when mouse is inside the drag zone for 300ms
   const isInside = localX >= minX && localX <= maxX && localY >= minY && localY <= maxY
 
   if (isInside && !wasInside && !dropzoneHidden && useHotCorners.value) {
-    window.api.overlay.summonMainWindowAt({
-      x: overlayBounds.value.x + minX,
-      y: overlayBounds.value.y + minY
-    })
-    dropzoneHidden = true
-    overlayOpacity.value = 0
+    // Start timer
+    dropzoneEnterTimer = setTimeout(() => {
+      if (isInside && !dropzoneHidden && useHotCorners.value) {
+        window.api.overlay.summonMainWindowAt({
+          x: overlayBounds.value.x + minX,
+          y: overlayBounds.value.y + minY
+        })
+        dropzoneHidden = true
+        overlayOpacity.value = 0
+      }
+    }, hotCornerTriggerTimeoutMs.value)
   }
 
-  // Unhide dropzone when cursor leaves and re-enters
-  if (!isInside && wasInside && dropzoneHidden) {
-    dropzoneHidden = false
+  // Cancel timer if mouse leaves before 300ms
+  if (!isInside && wasInside) {
+    if (dropzoneEnterTimer) {
+      clearTimeout(dropzoneEnterTimer)
+      dropzoneEnterTimer = null
+    }
+    if (dropzoneHidden) {
+      dropzoneHidden = false
+    }
   }
 
   wasInside = isInside

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The file transfer app now includes an encrypted password authentication system to secure peer-to-peer connections. Each device can set a "super secret password" that other devices must know to send files to it.
+Beam includes an encrypted password authentication system to secure peer-to-peer connections. Each device can set a "super secret password" that other devices must know to send files to it.
 
 ## How It Works
 

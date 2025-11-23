@@ -17,7 +17,7 @@ export function createAppMenu(
                 accelerator: 'CommandOrControl+,'
               },
               {
-                label: 'About File Transfer App',
+                label: 'About Beam',
                 click: onAboutClick
               }
             ]
@@ -35,7 +35,7 @@ export function createAppMenu(
                 accelerator: 'CommandOrControl+,'
               },
               {
-                label: 'About File Transfer App',
+                label: 'About Beam',
                 click: onAboutClick
               },
               {

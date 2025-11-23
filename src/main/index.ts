@@ -16,6 +16,10 @@ import { startSignalingServer } from './signaling'
 import { setupPeerTransferIPC, setupFileReceiver } from './peer'
 import { setupOverlay, shutdownOverlay } from './overlay'
 import { createSystemTray, destroyTray } from './tray'
+import iconMac from '../../resources/icon_mac.png?asset'
+import iconGeneric from '../../resources/icon.png?asset'
+
+const icon = process.platform === 'darwin' ? iconMac : iconGeneric
 
 let settingsWindow: BrowserWindow | null = null
 let addDeviceWindow: BrowserWindow | null = null
@@ -52,12 +56,24 @@ function scheduleBonjourPublish(): void {
           : 'Unknown device'
       const deviceName = `${baseName}#${Math.floor(Math.random() * 1000)}`
       console.log(`Publishing service: ${deviceName} on port ${PORT}`)
-      bonjour.publish({ name: deviceName, type: 'file-transfer-app', port: PORT })
+      bonjour.publish({ name: deviceName, type: 'beam', port: PORT })
       console.log('Bonjour service published')
     } catch (error) {
       console.error('Failed to publish Bonjour service', error)
     }
   })
+}
+
+function restartBonjourServer(): void {
+  try {
+    console.log('Restarting Bonjour service...')
+    bonjour.unpublishAll(() => {
+      console.log('All Bonjour services unpublished')
+      scheduleBonjourPublish()
+    })
+  } catch (error) {
+    console.error('Failed to restart Bonjour service', error)
+  }
 }
 
 function openSettingsWindow(): void {
@@ -119,6 +135,12 @@ app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
+  // Set app icon for macOS dock
+  if (process.platform === 'darwin' && app.dock) {
+    const appIcon = nativeImage.createFromPath(icon)
+    app.dock.setIcon(appIcon)
+  }
+
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   app.on('browser-window-created', (_, window) => {
@@ -132,7 +154,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(menu)
 
   // Set up IPC handlers
-  setupSettingsIPC()
+  settingsReady.then(() => setupSettingsIPC())
   setupBonjourIPC(bonjour)
   setupFileIconIPC()
   setupPeerTransferIPC()
@@ -151,6 +173,9 @@ app.whenReady().then(() => {
     if (passwordSetupWindow) {
       passwordSetupWindow.close()
     }
+  })
+  ipcMain.on('restart-bonjour-server', () => {
+    restartBonjourServer()
   })
   ipcMain.on('close-active-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)

@@ -36,7 +36,7 @@ const statusColor = computed(() => {
     case 'error':
       return 'text-red-500'
     case 'transferring':
-      return 'text-blue-500'
+      return 'text-yellow-500'
     default:
       return 'text-gray-500'
   }
@@ -68,7 +68,7 @@ const statusColor = computed(() => {
       <div
         class="h-full transition-all duration-300 rounded-full"
         :class="{
-          'bg-blue-500': status === 'transferring',
+          'bg-yellow-500': status === 'transferring',
           'bg-green-500': status === 'completed',
           'bg-red-500': status === 'error',
           'bg-gray-400': status === 'pending'

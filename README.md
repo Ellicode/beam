@@ -1,6 +1,6 @@
-# file-transfer-app
+# Beam
 
-An Electron application with Vue and TypeScript
+Beam - Fast and secure file transfer application built with Electron, Vue, and TypeScript
 
 ## Recommended IDE Setup
 

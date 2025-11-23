@@ -262,7 +262,7 @@ onUnmounted(() => {
           v-model="devicePassword"
           type="password"
           placeholder="Super secret password"
-          class="w-full dark:bg-neutral-800 bg-neutral-100 dark:text-white text-black rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 ring-blue-500 mb-2"
+          class="w-full dark:bg-neutral-800 bg-neutral-100 dark:text-white text-black rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 ring-yellow-500 mb-2"
           @keyup.enter="addDevice()"
           @keyup.esc="cancelPasswordPrompt"
         />
@@ -274,7 +274,7 @@ onUnmounted(() => {
             Cancel
           </button>
           <button
-            class="flex-1 px-4 py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-4 py-2 rounded-lg text-sm bg-yellow-600 hover:bg-yellow-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="!devicePassword"
             @click="addDevice()"
           >

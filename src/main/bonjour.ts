@@ -1,7 +1,7 @@
 import { Bonjour, Service, Browser } from 'bonjour-service'
 import { ipcMain, BrowserWindow } from 'electron'
 const PORT = 4000
-const SERVICE_TYPE = 'file-transfer-app'
+const SERVICE_TYPE = 'beam'
 
 let publishedService: Service | null = null
 let activeBrowser: Browser | null = null

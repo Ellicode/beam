@@ -5,11 +5,13 @@ import {
   FolderDown,
   Lock,
   MousePointerClick,
-  MonitorDot
+  MonitorDot,
+  LoaderPinwheel
 } from 'lucide-vue-next'
 import Switch from '../components/Switch.vue'
 import { useSettings } from '../composables/useSettings'
 import { ref, watch, onMounted, computed } from 'vue'
+import Slider from '../components/Slider.vue'
 
 interface OverlayDisplayInfo {
   id: number
@@ -28,6 +30,7 @@ const downloadPath = useSetting('downloadPath')
 const useHotCorners = useSetting('useHotCorners')
 const hotCornerPosition = useSetting('hotCornerPosition')
 const hotCornerDisplayIndex = useSetting('hotCornerDisplayIndex')
+const hotCornerTriggerTimeoutMs = useSetting('hotCornerTriggerTimeoutMs')
 const screenSize = ref({ width: 0, height: 0 })
 const availableDisplays = ref<OverlayDisplayInfo[]>([])
 const selectedDisplayIndex = ref(0)
@@ -37,6 +40,8 @@ const scaleFactor = 8
 const previewWindowSize = 250 / scaleFactor
 const dockHeight = 30
 const previewMargin = 2
+const needsMainReset = ref(false)
+let hasInitialized = false
 
 const containerRef = ref<HTMLElement | null>(null)
 const handleRef = ref<HTMLElement | null>(null)
@@ -79,6 +84,14 @@ const containerStyle = computed(() => ({
 
 watch(downloadPath, (newPath) => {
   displayPath.value = newPath || ''
+})
+
+watch(deviceName, () => {
+  if (!hasInitialized) {
+    hasInitialized = true
+    return
+  }
+  needsMainReset.value = true
 })
 
 watch(
@@ -275,6 +288,13 @@ const removePassword = async (): Promise<void> => {
   hasPassword.value = false
 }
 
+const restartMainProcess = (): void => {
+  if (needsMainReset.value) {
+    window.api.bonjour.restart()
+    needsMainReset.value = false
+  }
+}
+
 // Listen for settings changes to update password status
 window.api.settings.onChanged(() => {
   window.api.settings.hasPassword().then((status) => {
@@ -317,6 +337,9 @@ window.api.settings.onChanged(() => {
         Choose Folder
       </button>
     </div>
+    <h2 class="uppercase text-xs mb-4 dark:text-neutral-400 text-neutral-500 select-none">
+      Hot corners
+    </h2>
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center">
         <MousePointerClick class="w-5 h-5 me-4" />
@@ -328,6 +351,29 @@ window.api.settings.onChanged(() => {
         </div>
       </div>
       <Switch v-model="useHotCorners" />
+    </div>
+    <div class="flex items-center justify-between mb-5">
+      <div class="flex items-center me-5">
+        <LoaderPinwheel class="w-5 h-5 shrink-0 me-4" />
+        <div>
+          <h3 class="font-semibold text-sm select-none">
+            Hot corner trigger timeout ({{ hotCornerTriggerTimeoutMs }}ms)
+          </h3>
+          <p class="text-xs dark:text-neutral-400 text-neutral-500 select-none">
+            Time (in milliseconds) the cursor must remain in the hot corner before triggering a
+            transfer.
+          </p>
+        </div>
+      </div>
+      <Slider
+        v-model="hotCornerTriggerTimeoutMs"
+        :min="0"
+        :max="1000"
+        :step="100"
+        :width="300"
+        :disabled="!useHotCorners"
+        :local-update="true"
+      />
     </div>
     <div v-if="availableDisplays.length > 0" class="flex items-center justify-between mb-5">
       <MonitorDot class="w-5 h-5 me-4" />
@@ -341,7 +387,7 @@ window.api.settings.onChanged(() => {
       </div>
       <select
         v-model.number="selectedDisplayIndex"
-        class="dark:bg-neutral-800 bg-neutral-200 dark:text-white text-black rounded-lg text-sm px-2 ms-5 w-60 py-1 outline-0 focus:ring-2 ring-offset-1 dark:ring-offset-neutral-900 ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed"
+        class="dark:bg-neutral-800 bg-neutral-200 dark:text-white text-black rounded-lg text-sm px-2 ms-5 w-60 py-1 outline-0 focus:ring-2 ring-offset-1 dark:ring-offset-neutral-900 ring-yellow-500 disabled:opacity-60 disabled:cursor-not-allowed"
         :disabled="!useHotCorners"
       >
         <option v-for="display in availableDisplays" :key="display.id" :value="display.index">
@@ -374,7 +420,7 @@ window.api.settings.onChanged(() => {
         <div class="bg-red-400 rounded-sm w-3 h-3 shadow-sm"></div>
         <div class="bg-yellow-400 rounded-sm w-3 h-3 shadow-sm"></div>
         <div class="bg-green-400 rounded-sm w-3 h-3 shadow-sm"></div>
-        <div class="bg-blue-400 rounded-sm w-3 h-3 shadow-sm"></div>
+        <div class="bg-yellow-400 rounded-sm w-3 h-3 shadow-sm"></div>
       </div>
     </div>
     <h2 class="uppercase text-xs my-4 dark:text-neutral-400 text-neutral-500 select-none">
@@ -393,7 +439,7 @@ window.api.settings.onChanged(() => {
       <input
         v-model="deviceName"
         type="text"
-        class="dark:bg-neutral-800 bg-neutral-200 dark:text-white text-black rounded-lg text-sm px-2 ms-5 w-60 py-1 outline-0 focus:ring-2 ring-offset-1 dark:ring-offset-neutral-900 ring-blue-500"
+        class="dark:bg-neutral-800 bg-neutral-200 dark:text-white text-black rounded-lg text-sm px-2 ms-5 w-60 py-1 outline-0 focus:ring-2 ring-offset-1 dark:ring-offset-neutral-900 ring-yellow-500"
         placeholder="My computer"
       />
     </div>
@@ -423,4 +469,33 @@ window.api.settings.onChanged(() => {
       </button>
     </div>
   </div>
+  <Transition name="fade">
+    <div
+      v-if="needsMainReset"
+      class="fixed bottom-4 right-4 px-2 w-[calc(100%-2rem)] bg-orange-400 border border-orange-500 inset-shadow-2xs inset-shadow-white/20 shadow-lg flex items-center h-10 rounded-xl"
+    >
+      <p class="text-white/90 text-sm select-none">
+        Changing your device name requires restarting the main process.
+      </p>
+
+      <button
+        class="bg-white ms-auto px-3 active:opacity-75 text-orange-400 py-1 rounded-lg text-sm select-none"
+        @click="restartMainProcess"
+      >
+        Restart
+      </button>
+    </div>
+  </Transition>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+</style>

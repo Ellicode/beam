@@ -1,6 +1,8 @@
 import { Tray, Menu, nativeImage, BrowserWindow, app } from 'electron'
 import { join } from 'path'
 
+const isMac = process.platform === 'darwin'
+
 let tray: Tray | null = null
 
 export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tray {
@@ -9,7 +11,9 @@ export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tra
 
   // Try to load icon from resources, fallback to empty
   try {
-    const iconPath = join(__dirname, '../../resources/icon.png')
+    const iconPath = isMac
+      ? join(__dirname, '../../resources/tray_mac.png')
+      : join(__dirname, '../../resources/tray_windows.png')
     const loadedIcon = nativeImage.createFromPath(iconPath)
     if (!loadedIcon.isEmpty()) {
       // Resize for tray (16x16 or 32x32 depending on platform)
@@ -21,7 +25,7 @@ export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tra
     tray = new Tray(icon)
   }
 
-  tray.setToolTip('File Transfer App')
+  tray.setToolTip('Beam')
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -40,7 +44,8 @@ export function createSystemTray(getMainWindow: () => BrowserWindow | null): Tra
     {
       label: 'Quit',
       click: () => {
-        app.quit()
+        destroyTray()
+        app.exit()
       }
     }
   ])

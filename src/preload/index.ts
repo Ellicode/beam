@@ -64,6 +64,7 @@ const api = {
     publish: (deviceName: string): Promise<void> =>
       ipcRenderer.invoke('bonjour:publish', deviceName),
     unpublishAll: (): Promise<void> => ipcRenderer.invoke('bonjour:unpublishAll'),
+    restart: (): void => ipcRenderer.send('restart-bonjour-server'),
     findServices: (): Promise<Array<{ name: string; address: string; port: number }>> =>
       ipcRenderer.invoke('bonjour:findServices'),
     stopDiscovery: (): Promise<void> => ipcRenderer.invoke('bonjour:stopDiscovery'),

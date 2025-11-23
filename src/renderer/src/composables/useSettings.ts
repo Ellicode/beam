@@ -10,6 +10,7 @@ interface Settings {
   useHotCorners?: boolean
   hotCornerPosition?: { x: number; y: number }
   hotCornerDisplayIndex?: number
+  hotCornerTriggerTimeoutMs?: number
   savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
@@ -22,6 +23,7 @@ const settings = ref<Settings>({
   useHotCorners: false,
   hotCornerPosition: { x: 0, y: 0 },
   hotCornerDisplayIndex: 0,
+  hotCornerTriggerTimeoutMs: 300,
   savedDevices: []
 })
 

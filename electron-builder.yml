@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: file-transfer-app
+appId: com.beam.app
+productName: Beam
 directories:
   buildResources: build
 files:
@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: file-transfer-app
+  executableName: beam
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

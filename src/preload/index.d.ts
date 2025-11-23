@@ -10,6 +10,7 @@ export interface Settings {
   useHotCorners?: boolean
   hotCornerPosition?: { x: number; y: number }
   hotCornerDisplayIndex?: number
+  hotCornerTriggerTimeoutMs?: number
   savedDevices?: Array<{ name: string; address: string; port: number; authKey?: string }>
 }
 
@@ -46,6 +47,7 @@ export interface FileAPI {
 export interface BonjourAPI {
   publish: (deviceName: string) => Promise<void>
   unpublishAll: () => Promise<void>
+  restart: () => void
   findServices: () => Promise<Array<{ name: string; address: string; port: number }>>
   stopDiscovery: () => Promise<void>
   onServiceUp: (

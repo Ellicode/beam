@@ -76,7 +76,7 @@ const closeModal = (): void => {
               v-model="newPassword"
               :type="showPassword ? 'text' : 'password'"
               placeholder="Enter password (min 8 characters)"
-              class="w-full dark:bg-white/5 bg-black/5 ring-offset-2 dark:ring-offset-neutral-800 dark:text-white text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500 pr-10"
+              class="w-full dark:bg-white/5 bg-black/5 ring-offset-2 dark:ring-offset-neutral-800 dark:text-white text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-yellow-500 pr-10"
               @keyup.enter="setPassword"
             />
             <button
@@ -98,7 +98,7 @@ const closeModal = (): void => {
             v-model="confirmPassword"
             :type="showPassword ? 'text' : 'password'"
             placeholder="Re-enter password"
-            class="w-full dark:bg-white/5 bg-black/5 dark:text-white ring-offset-2 dark:ring-offset-neutral-800 text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-blue-500"
+            class="w-full dark:bg-white/5 bg-black/5 dark:text-white ring-offset-2 dark:ring-offset-neutral-800 text-black rounded-lg text-sm px-3 py-2.5 outline-0 focus:ring-2 ring-yellow-500"
             @keyup.enter="setPassword"
           />
         </div>
@@ -112,7 +112,7 @@ const closeModal = (): void => {
           Cancel
         </button>
         <button
-          class="flex-1 px-4 py-2.5 rounded-xl text-sm bg-blue-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 px-4 py-2.5 rounded-xl text-sm bg-yellow-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="!newPassword || !confirmPassword"
           @click="setPassword"
         >
