@@ -7,7 +7,7 @@ const appVersion = (import.meta.env.VITE_APP_VERSION as string) || '1.-.- DEV'
   <div
     class="flex flex-col justify-center h-full items-center text-center dark:text-neutral-100 p-5"
   >
-    <img src="../assets/electron.svg" alt="App Logo" class="w-12 h-12 mb-4" />
+    <img src="../assets/icon.png" alt="App Logo" class="w-16 h-16 mb-2" />
     <h1 class="text-xl font-bold mb-4">Beam</h1>
     <p class="mb-4 text-sm dark:text-neutral-300 text-neutral-600">
       Beam is an open-source application that allows you to easily transfer files between devices on

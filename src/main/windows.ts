@@ -13,6 +13,7 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     resizable: false,
     minimizable: false,
+    title: 'Beam',
     titleBarStyle: 'hidden',
     icon,
 
@@ -77,6 +78,7 @@ export function createOverlayWindow(): BrowserWindow {
     show: false,
     width: screenSize.width,
     height: screenSize.height,
+    title: 'Beam Overlay',
     acceptFirstMouse: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -108,6 +110,7 @@ export function createSettingsWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
     titleBarStyle: 'hidden',
+    title: 'Settings',
     icon,
 
     ...(process.platform !== 'darwin'
@@ -155,6 +158,7 @@ export function createAddDeviceModal(mainWindow?: BrowserWindow): BrowserWindow 
     resizable: false,
     titleBarStyle: 'hidden',
     icon,
+    title: 'Add Device',
 
     ...(process.platform !== 'darwin'
       ? {
@@ -209,6 +213,7 @@ export function createPasswordSetupModal(parentWindow?: BrowserWindow): BrowserW
     show: false,
     resizable: false,
     titleBarStyle: 'hidden',
+    title: 'Password Setup',
     icon,
 
     ...(process.platform !== 'darwin'
@@ -263,6 +268,7 @@ export function createAboutWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#171717' : '#ffffff',
     titleBarStyle: 'hidden',
+    title: 'About Beam',
     icon,
     ...(process.platform !== 'darwin'
       ? {

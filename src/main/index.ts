@@ -132,8 +132,11 @@ function openPasswordSetupWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Set app name
+  app.setName('Beam')
+
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.beam.app')
 
   // Set app icon for macOS dock
   if (process.platform === 'darwin' && app.dock) {

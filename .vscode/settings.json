@@ -9,7 +9,6 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "terminal.integrated.inheritEnv": false,
-  "terminal.integrated.shellIntegration.enabled": false,
   "terminal.integrated.automationProfile.osx": {
     "path": "/bin/zsh"
   }
